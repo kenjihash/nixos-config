@@ -69,6 +69,19 @@ in {
     neovim
     gcc          # C compiler for nvim-treesitter (main) to build parsers
     tree-sitter  # tree-sitter CLI, also required by nvim-treesitter (main)
+
+    # LSP servers + formatters for the LazyVim extras. mason is disabled, so
+    # these come from Nix. (astro intentionally omitted for this VM.)
+    lua-language-server           # lua (LazyVim itself)
+    stylua
+    basedpyright                  # python
+    ruff
+    black
+    typescript-language-server    # typescript / js
+    prettier
+    marksman                      # markdown
+    vscode-langservers-extracted  # json / html / css / eslint
+    yaml-language-server          # yaml
   ];
 
   #---------------------------------------------------------------------
