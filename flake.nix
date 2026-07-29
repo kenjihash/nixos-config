@@ -49,6 +49,10 @@
     jujutsu.url = "github:martinvonz/jj";
     zig.url = "github:mitchellh/zig-overlay";
 
+    # herdr terminal multiplexer (not in nixpkgs) — consumed by kenjihash's
+    # home-manager layer via inputs.herdr.packages.<system>.default.
+    herdr.url = "github:ogulcancelik/herdr";
+
     # Non-flakes
     theme-bobthefish.url = "github:oh-my-fish/theme-bobthefish/e3b4d4eafc23516e35f162686f08a42edf844e40";
     theme-bobthefish.flake = false;

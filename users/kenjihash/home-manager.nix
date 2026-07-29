@@ -82,6 +82,9 @@ in {
     marksman                      # markdown
     vscode-langservers-extracted  # json / html / css / eslint
     yaml-language-server          # yaml
+  ] ++ [
+    # herdr multiplexer — from its own flake (not in nixpkgs)
+    inputs.herdr.packages.${pkgs.stdenv.hostPlatform.system}.default
   ];
 
   #---------------------------------------------------------------------
@@ -121,6 +124,11 @@ in {
   xdg.configFile."nvim".source =
     config.lib.file.mkOutOfStoreSymlink
       "${config.home.homeDirectory}/nixos-config/users/kenjihash/nvim";
+
+  # herdr multiplexer config (vendored). Only config.toml is symlinked, so
+  # herdr's runtime state (sessions, logs, sockets) stays writable in
+  # ~/.config/herdr.
+  xdg.configFile."herdr/config.toml".source = ./herdr/config.toml;
 
   #---------------------------------------------------------------------
   # Git — identity + SSH commit signing with the key copied from the Mac
