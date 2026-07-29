@@ -99,6 +99,11 @@
       user   = "mitchellh";
     };
 
+    nixosConfigurations.dev = mkSystem "dev" {
+      system = "aarch64-linux";
+      user   = "kenjihash";
+    };
+
     nixosConfigurations.wsl = mkSystem "wsl" {
       system = "x86_64-linux";
       user   = "mitchellh";
