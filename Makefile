@@ -1,7 +1,7 @@
 # Connectivity info for Linux VM
 NIXADDR ?= unset
 NIXPORT ?= 22
-NIXUSER ?= mitchellh
+NIXUSER ?= kenjihash
 
 # Get the path to this Makefile and directory
 MAKEFILE_DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
@@ -13,7 +13,7 @@ UNAME := $(shell uname)
 ifeq ($(UNAME),Darwin)
 NIXNAME ?= macbook-pro-m1
 else
-NIXNAME ?= vm-aarch64
+NIXNAME ?= dev
 endif
 
 # NixOS configuration built by the cache target, including from Darwin.
