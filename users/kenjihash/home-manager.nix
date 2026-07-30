@@ -85,6 +85,10 @@ in {
   ] ++ [
     # herdr multiplexer — from its own flake (not in nixpkgs)
     inputs.herdr.packages.${pkgs.stdenv.hostPlatform.system}.default
+  ] ++ lib.optionals (isLinux && !isWSL) [
+    # i3 desktop (GUI-only; used when booted into the i3 specialization)
+    rofi
+    ghostty     # terminal ($mod+n)
   ];
 
   #---------------------------------------------------------------------
@@ -129,6 +133,33 @@ in {
   # herdr's runtime state (sessions, logs, sockets) stays writable in
   # ~/.config/herdr.
   xdg.configFile."herdr/config.toml".source = ./herdr/config.toml;
+
+  # i3 desktop config (Linux GUI only; used when booted into the i3
+  # specialization). i3's colors come from the inline fallbacks in ./i3.
+  xdg.configFile."i3/config" = lib.mkIf (isLinux && !isWSL) {
+    text = builtins.readFile ./i3;
+  };
+  xdg.configFile."rofi/config.rasi" = lib.mkIf (isLinux && !isWSL) {
+    text = builtins.readFile ./rofi;
+  };
+  xdg.configFile."ghostty/config" = lib.mkIf (isLinux && !isWSL) {
+    source = ./ghostty;
+  };
+
+  programs.i3status = {
+    enable = isLinux && !isWSL;
+    general = {
+      colors = true;
+      color_good = "#8C9440";
+      color_bad = "#A54242";
+      color_degraded = "#DE935F";
+    };
+    modules = {
+      ipv6.enable = false;
+      "wireless _first_".enable = false;
+      "battery all".enable = false;
+    };
+  };
 
   #---------------------------------------------------------------------
   # Git — identity + SSH commit signing with the key copied from the Mac

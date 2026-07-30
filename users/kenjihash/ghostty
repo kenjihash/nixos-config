@@ -1,0 +1,7 @@
+# Solarized Dark (Higher Contrast) — matches the Mac terminal + nvim solarized.
+theme = Solarized Dark Higher Contrast
+font-family = InconsolataGo Nerd Font Mono
+
+# No GTK titlebar/tab bar — i3 tiles the window, so the decoration just wastes
+# vertical space.
+window-decoration = false
