@@ -24,11 +24,12 @@
     extraGroups = [ "docker" "wheel" ];
     shell = pkgs.fish;
 
-    # Password login is disabled for now (SSH-key login only, sudo is
-    # passwordless via vm-shared's security.sudo.wheelNeedsPassword = false).
-    # To enable console/password login later, on the VM run:
-    #   mkpasswd -m sha-512
-    # and set:  hashedPassword = "<the hash>";  then re-switch.
+    # Password for console + GUI (lightdm) login, from `mkpasswd -m sha-512`.
+    # SSH still uses the key below; sudo stays passwordless (vm-shared sets
+    # security.sudo.wheelNeedsPassword = false). Fine to commit for a local
+    # throwaway VM; for cloud VMs switch to hashedPasswordFile / sops so no
+    # hash lives in git.
+    hashedPassword = "$6$7NDULjR4jCxGkwie$BA9LYq6w9D4W6b4AL8ld/XdNSNvaC8nQfm8xwIyFbO6upqFxYeN1SN7xqoB9OFA16g2mfD614f8f4XgGxDnbO0";
 
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMNrAHuHZIwRNjJ2U5HHdx6GEYIPivhpOQ4GNtOonIzO kenji@twincounsel.com"
