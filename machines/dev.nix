@@ -40,4 +40,9 @@
   # InconsolataGo Nerd Font (from the Brewfile). System-level so fontconfig
   # discovers it for ghostty/i3.
   fonts.packages = [ pkgs.nerd-fonts.inconsolata-go ];
+
+  # This is a desktop machine — turn on kenjihash's GUI home-manager layer
+  # (ghostty/rofi/i3). Headless machines (e.g. a twincounsel EC2 loop VM) leave
+  # this off and get only the core ergonomics (shell/editor/herdr/CLIs/git).
+  home-manager.users.kenjihash.kenji.desktop.enable = true;
 }
