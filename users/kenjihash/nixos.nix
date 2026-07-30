@@ -32,7 +32,7 @@
     hashedPassword = "$6$7NDULjR4jCxGkwie$BA9LYq6w9D4W6b4AL8ld/XdNSNvaC8nQfm8xwIyFbO6upqFxYeN1SN7xqoB9OFA16g2mfD614f8f4XgGxDnbO0";
 
     openssh.authorizedKeys.keys = [
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMNrAHuHZIwRNjJ2U5HHdx6GEYIPivhpOQ4GNtOonIzO kenji@twincounsel.com"
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJjiRR+xiWj2RHhd80vcd8bcFeZHV00REGGa9Ps0zoyX kenji.hashimoto@gmail.com"
     ];
   };
 }
