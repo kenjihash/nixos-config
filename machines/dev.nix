@@ -1,4 +1,4 @@
-{ ... }: {
+{ lib, pkgs, ... }: {
   # Reuse Mitchell's VMware-Fusion-on-Apple-Silicon machine verbatim
   # (open-vm-tools, ens160 DHCP, x86 binfmt, /host mount, vm-shared base +
   # i3/plasma/gnome specializations). vm-shared already sets
@@ -19,4 +19,25 @@
   # breaks name resolution on this VM. Pin public resolvers so DNS just works
   # without hand-editing /etc/resolv.conf on every rebuild.
   networking.nameservers = [ "8.8.8.8" "1.1.1.1" ];
+
+  # NetworkManager at the base so networking works in EVERY boot entry —
+  # including the i3 specialization, which doesn't run GNOME (GNOME is what
+  # pulled in NetworkManager for the default boot). NM manages the NIC by
+  # device, so it doesn't matter that this VM enumerates ethernet as enp2s0
+  # rather than Mitchell's hardcoded ens160.
+  networking.networkmanager.enable = true;
+
+  # NM otherwise appends VMware's NAT resolver (192.168.204.2) ahead of the
+  # pinned nameservers, and DNS hangs on it. Tell NM not to manage resolv.conf;
+  # resolvconf then writes ONLY networking.nameservers below.
+  networking.networkmanager.dns = "none";
+
+  # The i3 specialization hardcodes dpi 220 (Mitchell's retina). This VM's
+  # virtual display reports no physical size (xrandr: 0mm x 0mm), so 220 just
+  # oversizes everything — force a normal 96.
+  specialisation.i3.configuration.services.xserver.dpi = lib.mkForce 96;
+
+  # InconsolataGo Nerd Font (from the Brewfile). System-level so fontconfig
+  # discovers it for ghostty/i3.
+  fonts.packages = [ pkgs.nerd-fonts.inconsolata-go ];
 }
