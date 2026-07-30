@@ -7,13 +7,17 @@ let
   isLinux = pkgs.stdenv.isLinux;
 
   shellAliases = {
+    # eza (icons render — InconsolataGo Nerd Font is installed)
+    ls = "eza --group-directories-first --icons=auto";
+    ll = "eza -l  --group-directories-first --icons=auto --git";  # long + git status
+    la = "eza -la --group-directories-first --icons=auto --git";  # long + hidden
+    lt = "eza --tree --level=2 --icons=auto";                     # 2-level tree
+
     l = "less -SN";
     v = "nvim";
     g = "rg --line-number";
     gs = "git status";
     c = "clear";
-    ll = "ls -l";
-    la = "ls -la";
   };
 in {
   # The i3 desktop layer (ghostty/rofi/i3) lives in gui.nix, gated by
@@ -114,7 +118,10 @@ in {
   };
 
   programs.starship.enable = true;
-  programs.zoxide.enable = true;
+  programs.zoxide = {
+    enable = true;
+    options = [ "--cmd cd" ]; # cd = zoxide (frecency); `cd foo` jumps, `cdi` picks
+  };
   programs.fzf.enable = true;
   programs.direnv = {
     enable = true;
