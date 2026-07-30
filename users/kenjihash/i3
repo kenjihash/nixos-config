@@ -36,10 +36,10 @@ client.background       $base03
 #----------------------------------------------------------------------
 # Startup
 #----------------------------------------------------------------------
-# Set resolution to match the host display (2560x1440). VMware's Virtual-1
-# doesn't list that mode, so add it first. Tune live with:
-#   xrandr --output Virtual-1 --mode <WxH>
-exec --no-startup-id sh -c "xrandr --newmode 2560x1440 241.50 2560 2608 2640 2720 1440 1443 1448 1481 +hsync -vsync 2>/dev/null; xrandr --addmode Virtual-1 2560x1440 2>/dev/null; xrandr --output Virtual-1 --mode 2560x1440"
+# Use the display's native/preferred mode (full retina resolution) for sharp
+# rendering. dpi 192 (dev.nix) scales the UI to a readable size. Requires
+# VMware's "Use full resolution for Retina display" to be enabled.
+exec --no-startup-id xrandr --output Virtual-1 --auto
 
 # No background
 exec --no-startup-id xsetroot -solid $base03

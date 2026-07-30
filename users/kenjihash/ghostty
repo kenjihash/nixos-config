@@ -1,6 +1,9 @@
 # Solarized Dark (Higher Contrast) — matches the Mac terminal + nvim solarized.
 theme = Solarized Dark Higher Contrast
 font-family = InconsolataGo Nerd Font Mono
+# Native retina res is dense and ghostty doesn't follow the VM's (0mm-EDID)
+# DPI, so size the terminal font explicitly. Tune to taste.
+font-size = 24
 
 # No GTK titlebar/tab bar — i3 tiles the window, so the decoration just wastes
 # vertical space.

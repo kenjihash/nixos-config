@@ -32,10 +32,10 @@
   # resolvconf then writes ONLY networking.nameservers below.
   networking.networkmanager.dns = "none";
 
-  # The i3 specialization hardcodes dpi 220 (Mitchell's retina). This VM's
-  # virtual display reports no physical size (xrandr: 0mm x 0mm), so 220 just
-  # oversizes everything — force a normal 96.
-  specialisation.i3.configuration.services.xserver.dpi = lib.mkForce 96;
+  # Render at the display's native (retina) resolution via `xrandr --auto` in
+  # the i3 config; dpi 192 scales the UI to a readable size (2x) so text stays
+  # crisp instead of VMware upscaling a lower-res framebuffer.
+  specialisation.i3.configuration.services.xserver.dpi = lib.mkForce 192;
 
   # InconsolataGo Nerd Font (from the Brewfile). System-level so fontconfig
   # discovers it for ghostty/i3.
