@@ -106,9 +106,13 @@
   # entries. Cap old generations too so the systemd-boot menu stays short.
   boot.loader.systemd-boot.configurationLimit = 10;
 
-  # InconsolataGo Nerd Font (from the Brewfile). System-level so fontconfig
-  # discovers it for ghostty/i3.
-  fonts.packages = [ pkgs.nerd-fonts.inconsolata-go ];
+  # Fonts, system-level so fontconfig discovers them for ghostty/i3.
+  fonts.packages = [
+    pkgs.nerd-fonts.inconsolata-go  # terminal font + Nerd Font icon glyphs
+    pkgs.noto-fonts-color-emoji     # color emoji (macOS has Apple Color Emoji;
+                                    # NixOS ships none, so emoji were tofu). fontconfig
+                                    # auto-routes emoji codepoints here.
+  ];
 
   # This is a desktop machine — turn on kenjihash's GUI home-manager layer
   # (ghostty/rofi/i3). Headless machines (e.g. a twincounsel EC2 loop VM) leave
