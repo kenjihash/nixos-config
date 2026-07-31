@@ -122,7 +122,18 @@ in {
     enable = true;
     options = [ "--cmd cd" ]; # cd = zoxide (frecency); `cd foo` jumps, `cdi` picks
   };
-  programs.fzf.enable = true;
+  programs.fzf = {
+    enable = true;
+    enableFishIntegration = false; # replaced by the fzf.fish plugin below (nicer history UI w/ real timestamps, not raw epoch)
+  };
+
+  # PatrickF1/fzf.fish — the `History>` search with formatted timestamps (matches
+  # the Mac), plus dir/variable/process widgets. Managed declaratively (no fisher).
+  # Needs fzf/fd/bat, all present in home.packages above.
+  programs.fish.plugins = [
+    { name = "fzf-fish"; src = pkgs.fishPlugins.fzf-fish.src; }
+  ];
+
   programs.direnv = {
     enable = true;
     nix-direnv.enable = true;
