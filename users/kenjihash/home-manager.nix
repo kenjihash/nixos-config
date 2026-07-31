@@ -150,7 +150,7 @@ in {
 
     settings = {
       user.name = "Kenji Hashimoto";
-      user.email = "kenji@twincounsel.com";
+      user.email = "kenji.hashimoto@gmail.com";
       user.signingKey = "/home/kenjihash/.ssh/id_ed25519.pub";
       github.user = "kenjihash";
 
