@@ -95,6 +95,13 @@
     };
   };
 
+  # Mitchell keeps flatpak on only to test flatpaks; we don't use it. With the
+  # GNOME/i3 specialisations gone, nothing provides xdg.portal anymore, and
+  # flatpak asserts a portal is present — so drop flatpak (leaner, and kills
+  # the assertion at its source). If a GTK app later needs it, add instead:
+  #   xdg.portal = { enable = true; extraPortals = [ pkgs.xdg-desktop-portal-gtk ]; };
+  services.flatpak.enable = lib.mkForce false;
+
   # Only one desktop now, so the boot menu drops the per-DE specialisation
   # entries. Cap old generations too so the systemd-boot menu stays short.
   boot.loader.systemd-boot.configurationLimit = 10;
