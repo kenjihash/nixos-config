@@ -108,8 +108,7 @@
 
   # Fonts, system-level so fontconfig discovers them for ghostty/i3.
   fonts.packages = [
-    pkgs.jetbrains-mono             # ghostty terminal font — matches the Mac + Mitchell
-    pkgs.nerd-fonts.inconsolata-go  # Nerd Font icon glyphs; also used by i3/rofi
+    pkgs.nerd-fonts.jetbrains-mono  # ghostty terminal font + matching Nerd Font icons
     pkgs.noto-fonts-color-emoji     # color emoji (macOS has Apple Color Emoji;
                                     # NixOS ships none, so emoji were tofu). fontconfig
                                     # auto-routes emoji codepoints here.

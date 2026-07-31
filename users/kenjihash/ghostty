@@ -1,11 +1,11 @@
 # Solarized Dark (Higher Contrast) — matches the Mac terminal + nvim solarized.
 theme = Solarized Dark Higher Contrast
-# JetBrains Mono — matches the Mac (ghostty's built-in default) and Mitchell's
-# ghostty.linux. Plain family, NOT a Nerd Font variant: ghostty bundles Nerd
-# Font symbols and auto-falls-back for icon glyphs, so icons still render.
-font-family = JetBrains Mono
-# ghostty doesn't follow the VM's (0mm-EDID) DPI, so size explicitly. 13 mirrors
-# the Mac's effective default size. Tune to taste.
+# JetBrainsMono Nerd Font — same JetBrains Mono letterforms as the Mac, but the
+# Nerd-Font-patched build so ICONS live in the same metric-matched font (the
+# "Mono" variant sizes each icon to exactly one terminal cell). Plain "JetBrains
+# Mono" forced icons onto a mismatched fallback font and they rendered ugly.
+font-family = JetBrainsMono Nerd Font Mono
+# ghostty doesn't follow the VM's (0mm-EDID) DPI, so size explicitly. Tune to taste.
 font-size = 13
 
 # No GTK titlebar/tab bar — i3 tiles the window, so the decoration just wastes
