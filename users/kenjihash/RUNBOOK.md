@@ -16,9 +16,8 @@ All commands run **from the Mac** unless marked `# on the VM`.
 ## 1. On the booted NixOS minimal ISO
 
 ```bash
-sudo -i
+sudo su
 passwd                 # set root password to: root
-systemctl start sshd   # if not already running
 ip -4 addr             # note the ethernet IP (10.0.0.x) = <IP>
 ```
 
