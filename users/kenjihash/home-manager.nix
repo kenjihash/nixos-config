@@ -63,7 +63,7 @@ in {
     shellcheck
     shfmt
 
-    # Agent CLIs (claude-code is pinned to unstable via the flake overlay)
+    # Agent CLIs (pinned to unstable via the flake overlay)
     claude-code
     codex
 

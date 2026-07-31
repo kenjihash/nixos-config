@@ -80,6 +80,7 @@
 
         # Want the latest version of these
         claude-code = unstable.claude-code;
+        codex = unstable.codex;
         nushell = unstable.nushell;
 
         ibus = prev.ibus;
