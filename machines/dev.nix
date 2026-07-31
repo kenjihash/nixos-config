@@ -1,8 +1,9 @@
 { lib, pkgs, ... }: {
-  # Reuse Mitchell's VMware-Fusion-on-Apple-Silicon machine verbatim
-  # (open-vm-tools, ens160 DHCP, x86 binfmt, /host mount, vm-shared base +
-  # i3/plasma/gnome specializations). vm-shared already sets
-  # networking.hostName = "dev", so no override is needed here.
+  # Reuse Mitchell's VMware-Fusion-on-Apple-Silicon machine (open-vm-tools,
+  # DHCP, x86 binfmt, /host mount, vm-shared base). vm-shared already sets
+  # networking.hostName = "dev", so no override is needed here. We DROP its
+  # GNOME/plasma/gnome-ibus desktops in favor of i3-only (see the Desktop
+  # section below) — done entirely in THIS file so upstream rebases stay clean.
   imports = [ ./vm-aarch64.nix ];
 
   # ── HOST REQUIREMENT: VMware Fusion network adapter MUST be "Bridged" ──
@@ -33,11 +34,9 @@
   # whatever the LAN hands out.
   networking.nameservers = [ "8.8.8.8" "1.1.1.1" ];
 
-  # NetworkManager at the base so networking works in EVERY boot entry —
-  # including the i3 specialization, which doesn't run GNOME (GNOME is what
-  # pulled in NetworkManager for the default boot). NM manages the NIC by
-  # device, so it doesn't matter that this VM enumerates ethernet as enp2s0
-  # rather than Mitchell's hardcoded ens160.
+  # NetworkManager at the base so networking is always up regardless of desktop.
+  # NM manages the NIC by device, so it doesn't matter that this VM enumerates
+  # ethernet as enp2s0 rather than Mitchell's hardcoded ens160.
   networking.networkmanager.enable = true;
 
   # Tell NM not to manage resolv.conf so it doesn't prepend the router's
@@ -45,10 +44,60 @@
   # writes ONLY networking.nameservers above.
   networking.networkmanager.dns = "none";
 
-  # Render at the display's native (retina) resolution via `xrandr --auto` in
-  # the i3 config; dpi 192 scales the UI to a readable size (2x) so text stays
-  # crisp instead of VMware upscaling a lower-res framebuffer.
-  specialisation.i3.configuration.services.xserver.dpi = lib.mkForce 192;
+  #---------------------------------------------------------------------
+  # Desktop: i3 ONLY (diverges from Mitchell's GNOME base + i3/plasma/
+  # gnome-ibus specialisations). He keeps all of those to test Ghostty and
+  # input methods across desktops; we just use the VM as a terminal, so we
+  # drop them. All of this lives HERE, never in vm-shared.nix or
+  # modules/specialization/*, so `git rebase main` onto upstream stays clean.
+  #
+  # `specialisation = lib.mkForce {}` does the heavy lifting: it discards the
+  # i3/plasma/gnome-ibus specialisations from the imported modules AND — because
+  # vm-shared gates the base GNOME/GDM on `config.specialisation != {}` — it
+  # simultaneously disables those. That leaves NO desktop, so we define i3 as
+  # the base ourselves below.
+  specialisation = lib.mkForce {};
+
+  services.xserver = {
+    enable = true;
+    xkb.layout = "us";
+
+    # Native (retina) resolution via `xrandr --auto` in the i3 config; dpi 192
+    # scales the UI 2x so text stays crisp instead of VMware upscaling a
+    # lower-res framebuffer.
+    dpi = 192;
+
+    desktopManager = {
+      xterm.enable = false;
+      wallpaper.mode = "fill";
+    };
+
+    displayManager = {
+      lightdm.enable = true;
+      # Faster key repeat in the i3 session (matches Mitchell's i3 setup).
+      sessionCommands = ''
+        ${pkgs.xset}/bin/xset r rate 200 40
+      '';
+    };
+
+    windowManager.i3.enable = true;
+  };
+
+  # Boot straight into i3 with no login prompt. lightdm + autoLogin is the
+  # reliable NixOS path (a truly display-manager-less autologin is fragile on
+  # VMware); the greeter is skipped, so a `make switch` that restarts the DM
+  # just blinks back to i3 instead of hanging on GNOME's software-GL startup.
+  services.displayManager = {
+    defaultSession = "none+i3";
+    autoLogin = {
+      enable = true;
+      user = "kenjihash";
+    };
+  };
+
+  # Only one desktop now, so the boot menu drops the per-DE specialisation
+  # entries. Cap old generations too so the systemd-boot menu stays short.
+  boot.loader.systemd-boot.configurationLimit = 10;
 
   # InconsolataGo Nerd Font (from the Brewfile). System-level so fontconfig
   # discovers it for ghostty/i3.
