@@ -6,7 +6,7 @@ theme = Solarized Dark Higher Contrast
 # Mono" forced icons onto a mismatched fallback font and they rendered ugly.
 font-family = JetBrainsMono Nerd Font Mono
 # ghostty doesn't follow the VM's (0mm-EDID) DPI, so size explicitly. Tune to taste.
-font-size = 13
+font-size = 24
 
 # No GTK titlebar/tab bar — i3 tiles the window, so the decoration just wastes
 # vertical space.
