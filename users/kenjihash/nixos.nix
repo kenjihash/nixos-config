@@ -29,10 +29,10 @@
     # security.sudo.wheelNeedsPassword = false). Fine to commit for a local
     # throwaway VM; for cloud VMs switch to hashedPasswordFile / sops so no
     # hash lives in git.
-    hashedPassword = "$6$7NDULjR4jCxGkwie$BA9LYq6w9D4W6b4AL8ld/XdNSNvaC8nQfm8xwIyFbO6upqFxYeN1SN7xqoB9OFA16g2mfD614f8f4XgGxDnbO0";
+    hashedPassword = "$6$iNFqj7Xh4a.tK9bI$VJlLfcHbUGjqYKdD.2/vL/BfMYghQ7ETVDWDNiueXaCw8HVbT65xWA.wMeOPWHyxdaoozKUkJEpTL4CRcQZRF0";
 
     openssh.authorizedKeys.keys = [
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJjiRR+xiWj2RHhd80vcd8bcFeZHV00REGGa9Ps0zoyX kenji.hashimoto@gmail.com"
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILpBz7YtGM5kte+NX5qy0x7gy6TKA5yO7GJEkw5kSRaW kenji.hashimoto@gmail.com"
     ];
   };
 }
