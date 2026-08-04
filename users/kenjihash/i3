@@ -44,8 +44,9 @@ exec --no-startup-id xrandr --output Virtual-1 --auto
 # No background
 exec --no-startup-id xsetroot -solid $base03
 
-# Keyboard layout settings
-exec --no-startup-id setxkbmap -layout us -variant intl
+# Keyboard layout settings. Plain "us", NOT the "intl" variant: intl makes
+# ' and " dead keys that wait for the next letter to compose an accent.
+exec --no-startup-id setxkbmap -layout us
 
 # Input methods
 exec --no-startup-id fcitx5 -d
