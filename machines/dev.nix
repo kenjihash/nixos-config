@@ -118,4 +118,18 @@
   # (ghostty/rofi/i3). Headless machines (e.g. a twincounsel EC2 loop VM) leave
   # this off and get only the core ergonomics (shell/editor/herdr/CLIs/git).
   home-manager.users.kenjihash.kenji.desktop.enable = true;
+
+  # Agent CLIs (claude-code, codex, gemini-cli, opencode, pi, grok), system-wide
+  # so they work from every repo on this box, not just one user's profile.
+  #
+  # Served by modules/agent-clis.nix rather than twincounsel's devtools module,
+  # deliberately. twincounsel/nix already takes THIS repo as an input for its
+  # personalModule, so importing it back here would form a dependency cycle —
+  # and twincounsel is private, so `sudo nixos-rebuild` (which evaluates as
+  # root, with no SSH agent) would need a pre-fetch dance on every update. The
+  # dependency stays one-way: team flake -> personal flake.
+  #
+  # Both catalogs pin the same six from nixpkgs-unstable, and loop-kenji still
+  # exercises the team module for real via `nixos-rebuild build-vm`.
+  kenji.agents.enable = true;
 }
