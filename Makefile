@@ -46,8 +46,57 @@ check:
 	nix flake check --all-systems --no-build
 	nix eval --raw '.#nixosConfigurations.vm-aarch64.config.system.build.toplevel.drvPath' >/dev/null
 	nix eval --raw '.#nixosConfigurations.vm-aarch64-utm.config.system.build.toplevel.drvPath' >/dev/null
+	nix eval --raw '.#nixosConfigurations.dev.config.system.build.toplevel.drvPath' >/dev/null
 	nix eval --raw '.#nixosConfigurations.wsl.config.system.build.toplevel.drvPath' >/dev/null
 	nix eval --raw '.#darwinConfigurations.macbook-pro-m1.config.system.build.toplevel.drvPath' >/dev/null
+	# `nix flake check` has NO checker for homeConfigurations or
+	# homeManagerModules — it prints "unknown flake output" and skips them, so
+	# these evals are the only automatic coverage the exported personal layer
+	# gets. The x86_64 line is the arch-parity gate for the cloud loop VM:
+	# EVAL only, never a build here (157 derivations under binfmt qemu).
+	nix eval --raw '.#homeConfigurations."kenji@aarch64-linux".activationPackage.drvPath' >/dev/null
+	nix eval --raw '.#homeConfigurations."kenji@x86_64-linux".activationPackage.drvPath' >/dev/null
+
+# Regression guard for the hm-core.nix split: refactoring the personal layer
+# must not change what `dev` actually gets. Compare against the recorded value.
+.PHONY: check/hm-regression
+check/hm-regression:
+	@nix eval --raw '.#nixosConfigurations.dev.config.home-manager.users.kenjihash.home.activationPackage.drvPath'
+	@echo
+
+# The standalone (cloud-dev-vms.md decision #3) personal home-manager layer.
+UNAME_M := $(shell uname -m)
+ifeq ($(UNAME_M),aarch64)
+HMSYSTEM ?= aarch64-linux
+else
+HMSYSTEM ?= x86_64-linux
+endif
+HMUSER ?= kenji
+HMNAME ?= $(HMUSER)@$(HMSYSTEM)
+
+# The home-manager revision this flake is locked to, so a bootstrap CLI can
+# never drift from the module set it is activating.
+HMREV := $(shell jq -r '.nodes["home-manager"].locked.rev' $(MAKEFILE_DIR)/flake.lock)
+
+# Build the standalone activation package without activating it. This is the
+# arch-parity gate: `make hm/build HMSYSTEM=x86_64-linux`.
+.PHONY: hm/build
+hm/build:
+	nix build --no-link --print-out-paths '.#homeConfigurations."$(HMNAME)".activationPackage'
+
+# Rebuild the personal layer. No sudo, decoupled from system activation.
+# NOTE: never run this for kenjihash on `dev` — home-manager runs there as a
+# NixOS module, and the two drivers share a gcroot without either erroring.
+.PHONY: hm/switch
+hm/switch:
+	home-manager switch --flake '.#$(HMNAME)'
+
+# First activation on a box with no home-manager CLI yet. Pinned to the
+# flake-locked rev on purpose: `home-manager/master` from the registry is
+# unpinned and would skew against the module set it activates.
+.PHONY: hm/bootstrap
+hm/bootstrap:
+	nix run 'github:nix-community/home-manager/$(HMREV)' -- switch --flake '.#$(HMNAME)'
 
 # This builds the given NixOS configuration and pushes the results to the
 # cache. This does not alter the current running system. This requires

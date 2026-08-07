@@ -79,9 +79,21 @@
         gh = unstable.gh;
 
         # Want the latest version of these
-        claude-code = unstable.claude-code;
-        codex = unstable.codex;
         nushell = unstable.nushell;
+
+        # Agent CLIs. These ship multiple times a week and nixos-26.05 froze in
+        # late May — stable is ~74 patch releases behind on claude-code, and
+        # grok-build (the real xAI CLI) is not in stable at all. Consumed by
+        # modules/agent-clis.nix. Same six that twincounsel/nix's
+        # overlays.agentClis pins; keep the two lists in step.
+        inherit (unstable)
+          claude-code
+          codex
+          gemini-cli
+          opencode
+          pi-coding-agent
+          grok-build
+          ;
 
         ibus = prev.ibus;
         ibus_stable = prev.ibus;
@@ -93,7 +105,45 @@
     mkSystem = import ./lib/mksystem.nix {
       inherit overlays nixpkgs inputs;
     };
+
+    # The PORTABLE half of my home-manager layer, exported for foreign flakes:
+    #   mkLoopVM { personalModule = inputs.kenji-nix-config.homeManagerModules.default; }
+    # `inputs` is closed over HERE, because the module needs inputs.herdr. That
+    # is the whole trick: a consuming flake never has to pass specialArgs or
+    # know anything about my inputs — it can treat this as an opaque module.
+    personalModule = import ./users/kenjihash/hm-core.nix {
+      inherit inputs;
+      isWSL = false;
+    };
+
+    # pkgs for STANDALONE home-manager. Must mirror what mkSystem gives the
+    # NixOS module: the layer contains unfree packages (_1password-cli) and
+    # overlay-pinned ones. The module cannot set nixpkgs.* itself (see the
+    # hm-core.nix header), so it has to happen out here.
+    hmPkgs = system: import nixpkgs {
+      inherit system overlays;
+      config.allowUnfree = true;
+    };
+
+    mkHome = { system, username, homeDirectory ? "/home/${username}", modules ? [ ] }:
+      inputs.home-manager.lib.homeManagerConfiguration {
+        pkgs = hmPkgs system;
+        modules = [
+          personalModule
+          { home.username = username; home.homeDirectory = homeDirectory; }
+        ] ++ modules;
+      };
   in {
+    homeManagerModules.default = personalModule;
+
+    # Arch parity with the cloud loop VM (x86_64), plus this box's arch. Build
+    # gates only — `nix flake check` cannot see these outputs, so the Makefile's
+    # explicit `nix eval` lines are the real coverage.
+    homeConfigurations = {
+      "kenji@x86_64-linux" = mkHome { system = "x86_64-linux"; username = "kenji"; };
+      "kenji@aarch64-linux" = mkHome { system = "aarch64-linux"; username = "kenji"; };
+    };
+
     nixosConfigurations.vm-aarch64 = mkSystem "vm-aarch64" {
       system = "aarch64-linux";
       user   = "mitchellh";
