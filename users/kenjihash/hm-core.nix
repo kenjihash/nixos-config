@@ -49,7 +49,9 @@ in
 {
   # The i3 desktop layer (ghostty/rofi/i3) lives in gui.nix, gated by
   # kenji.desktop.enable — off by default so headless machines get core only.
-  imports = [ ./gui.nix ];
+  # moshi.nix is the same shape: the moshi-hook daemon, gated by
+  # kenji.moshi.enable, off by default and turned on by the loop VM.
+  imports = [ ./gui.nix ./moshi.nix ];
 
   options.kenji = {
     nvim.mode = lib.mkOption {
