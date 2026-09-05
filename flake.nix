@@ -82,14 +82,20 @@
         nushell = unstable.nushell;
 
         # Agent CLIs. These ship multiple times a week and nixos-26.05 froze in
-        # late May — stable is ~74 patch releases behind on claude-code, and
-        # grok-build (the real xAI CLI) is not in stable at all. Consumed by
-        # modules/agent-clis.nix. Same six that twincounsel/nix's
-        # overlays.agentClis pins; keep the two lists in step.
+        # late May — stable is ~71 patch releases behind on claude-code, and
+        # neither grok-build (the real xAI CLI) nor antigravity-cli is in
+        # stable at all. Consumed by modules/agent-clis.nix. Same six that
+        # twincounsel/nix's overlays.agentClis pins; keep the two lists in step.
+        #
+        # antigravity-cli replaced gemini-cli: Google retired Gemini CLI for
+        # unpaid-tier and AI Pro/Ultra accounts, and nixpkgs now marks
+        # gemini-cli with a `removal` problem (frozen at 0.47.0, warns on eval).
+        # Its binary is `agy`, not `gemini`. Note `antigravity` is a DIFFERENT
+        # attr — the IDE, mainProgram antigravity-ide — not the terminal client.
         inherit (unstable)
           claude-code
           codex
-          gemini-cli
+          antigravity-cli
           opencode
           pi-coding-agent
           grok-build

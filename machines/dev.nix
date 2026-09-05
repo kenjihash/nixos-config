@@ -119,7 +119,7 @@
   # this off and get only the core ergonomics (shell/editor/herdr/CLIs/git).
   home-manager.users.kenjihash.kenji.desktop.enable = true;
 
-  # Agent CLIs (claude-code, codex, gemini-cli, opencode, pi, grok), system-wide
+  # Agent CLIs (claude-code, codex, agy, opencode, pi, grok), system-wide
   # so they work from every repo on this box, not just one user's profile.
   #
   # Served by modules/agent-clis.nix rather than twincounsel's devtools module,

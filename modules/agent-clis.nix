@@ -27,11 +27,18 @@ let
   #   grok -> grok-build       (`grok-cli` is superagent-ai's third-party
   #                             wrapper, NOT xAI's CLI)
   #   pi   -> pi-coding-agent  (`pi` is not a top-level attr)
-  # `codex-cli` and `google-gemini-cli` do not exist.
+  #   agy  -> antigravity-cli  (`antigravity` is the IDE — mainProgram
+  #                             antigravity-ide — not the terminal client. The
+  #                             CLI's binary really is `agy`.)
+  # `codex-cli` does not exist.
+  #
+  # `agy` replaced the former `gemini-cli` entry: Google retired Gemini CLI for
+  # unpaid-tier and AI Pro/Ultra accounts, and nixpkgs marks gemini-cli with a
+  # `removal` problem. See the overlay in flake.nix.
   catalog = {
     claude-code = pkgs.claude-code;
     codex = pkgs.codex;
-    gemini-cli = pkgs.gemini-cli;
+    agy = pkgs.antigravity-cli;
     opencode = pkgs.opencode;
     pi = pkgs.pi-coding-agent;
     grok = pkgs.grok-build;
