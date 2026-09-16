@@ -81,6 +81,12 @@
         # Want the latest version of these
         nushell = unstable.nushell;
 
+        # fzf must track nushell: home-manager's nushell integration asserts
+        # fzf >= 0.73.0, and stable 26.05 froze at 0.72.0. Since nushell is
+        # already pinned to unstable above, fzf has to come from the same
+        # place or `programs.fzf.enable` fails to evaluate.
+        fzf = unstable.fzf;
+
         # Agent CLIs. These ship multiple times a week and nixos-26.05 froze in
         # late May — stable is ~71 patch releases behind on claude-code, and
         # neither grok-build (the real xAI CLI) nor antigravity-cli is in
