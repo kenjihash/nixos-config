@@ -45,6 +45,60 @@ let
     gs = "git status";
     c = "clear";
   };
+
+  #-------------------------------------------------------------------------
+  # Agent-CLI editor mode. Both tools ship `normal` bindings by default and
+  # both take a config key:
+  #   codex        ~/.codex/config.toml      [tui] vim_mode_default = true
+  #   claude-code  ~/.claude/settings.json   "editorMode": "vim"
+  #
+  # These are SEEDED, not managed, and that is deliberate. Both files are
+  # rewritten by the tool itself — codex persists `[projects.*] trust_level`
+  # and TUI nux counters, Claude Code persists every /config change — so the
+  # herdr pattern (xdg.configFile -> /nix/store) is the wrong shape here.
+  # Verified against codex 0.145.0: it resolves the symlink and writes its
+  # tempfile NEXT TO the resolved target, so the first `trust this repo`
+  # aborts with
+  #     failed to persist config at /nix/store/...-config.toml
+  #     Read-only file system (os error 30) at path "/nix/store/.tmpXXXXXX"
+  # It does not clobber the symlink, it just cannot save anything, ever.
+  #
+  # So: write the key once if it is absent, then never touch it again. An
+  # explicit `false`/`"normal"` set by hand survives — the guard is on the key
+  # existing, not on its value.
+  #-------------------------------------------------------------------------
+  codexVimMode = pkgs.writeShellScript "codex-seed-vim-mode" ''
+    set -eu
+    cfg="$HOME/.codex/config.toml"
+    ${pkgs.coreutils}/bin/mkdir -p "$(${pkgs.coreutils}/bin/dirname "$cfg")"
+    [ -e "$cfg" ] || : > "$cfg"
+
+    # Any occurrence at all — mine or one I later flipped to false.
+    if ${pkgs.gnugrep}/bin/grep -q '^[[:space:]]*vim_mode_default[[:space:]]*=' "$cfg"; then
+      exit 0
+    fi
+
+    # A bare `[tui]` table may already exist (distinct from `[tui.foo]`, which
+    # codex writes on its own). Appending a second one is a TOML parse error,
+    # so insert into the first instead.
+    if ${pkgs.gnugrep}/bin/grep -q '^\[tui\][[:space:]]*$' "$cfg"; then
+      ${pkgs.gnused}/bin/sed -i '0,/^\[tui\][[:space:]]*$/s//[tui]\nvim_mode_default = true/' "$cfg"
+    else
+      printf '\n[tui]\nvim_mode_default = true\n' >> "$cfg"
+    fi
+  '';
+
+  claudeVimMode = pkgs.writeShellScript "claude-seed-vim-mode" ''
+    set -eu
+    cfg="$HOME/.claude/settings.json"
+    ${pkgs.coreutils}/bin/mkdir -p "$(${pkgs.coreutils}/bin/dirname "$cfg")"
+    [ -s "$cfg" ] || echo '{}' > "$cfg"
+
+    tmp="$(${pkgs.coreutils}/bin/mktemp "$cfg.XXXXXX")"
+    ${pkgs.jq}/bin/jq 'if has("editorMode") then . else .editorMode = "vim" end' \
+      "$cfg" > "$tmp"
+    ${pkgs.coreutils}/bin/mv "$tmp" "$cfg"
+  '';
 in
 {
   # The i3 desktop layer (ghostty/rofi/i3) lives in gui.nix, gated by
@@ -90,6 +144,10 @@ in
     };
 
     herdr.enable = lib.mkEnableOption "the herdr multiplexer (from its own flake input)" // {
+      default = true;
+    };
+
+    agentClis.vimMode = lib.mkEnableOption "vi keybindings in the codex and claude prompt editors" // {
       default = true;
     };
   };
@@ -234,6 +292,18 @@ in
         };
       };
     }
+
+    (lib.mkIf cfg.agentClis.vimMode {
+      # entryAfter writeBoundary: these touch $HOME outside the generation, so
+      # they must run once home-manager is done laying down its own links.
+      # Unconditional (not gated on the CLIs being installed) — the config is
+      # harmless when absent and the provider varies by machine: agent-clis.nix
+      # locally, twincounsel's devtools module on a loop VM.
+      home.activation.agentClisVimMode = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        run ${codexVimMode}
+        run ${claudeVimMode}
+      '';
+    })
 
     (lib.mkIf cfg.herdr.enable {
       # Not in nixpkgs, so it comes from its own flake input.
