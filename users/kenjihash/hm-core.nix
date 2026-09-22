@@ -186,7 +186,6 @@ in
         zoxide
         wget
         gh
-        lazygit
         mosh
         _1password-cli
 
@@ -262,6 +261,16 @@ in
       programs.fzf = {
         enable = true;
         enableFishIntegration = false; # replaced by the fzf.fish plugin above (nicer history UI w/ real timestamps, not raw epoch)
+      };
+
+      # config.yml is store-generated and symlinked read-only, so it cannot be
+      # corrupted by a stray write. settings must stay non-empty: the module
+      # writes no file at all when it is `{ }`, which leaves the path unmanaged.
+      programs.lazygit = {
+        enable = true;
+        settings = {
+          gui.nerdFontsVersion = "3";
+        };
       };
 
       programs.direnv = {
