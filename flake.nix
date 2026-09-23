@@ -69,11 +69,29 @@
       inputs.zig.overlays.default
 
       (_final: prev: let
+        inherit (prev) lib;
         system = prev.stdenv.hostPlatform.system;
         unstable = import inputs.nixpkgs-unstable {
           inherit system;
           config.allowUnfree = true;
         };
+
+        # Move a nixpkgs prebuilt-binary package onto the release recorded in
+        # ./upstream. Only the version and the artifact change; the packaging —
+        # install layout, wrappers, shell completions, version check — stays
+        # nixpkgs', so a release that reshapes the archive fails the build
+        # rather than installing something wrong.
+        onUpstreamRelease = pkg: data: let
+          platform = data.platforms.${system}
+            or (throw "${pkg.pname}: no upstream release artifact for ${system}");
+        in pkg.overrideAttrs (old: {
+          inherit (data) version;
+          src = unstable.fetchurl { inherit (platform) url hash; };
+
+          # wholeVersion is derived from the version nixpkgs pins, so it does
+          # not describe the artifact fetched above.
+          passthru = removeAttrs (old.passthru or { }) [ "wholeVersion" ];
+        });
       in {
         # gh CLI on stable has bugs.
         gh = unstable.gh;
@@ -93,19 +111,55 @@
         # stable at all. Consumed by modules/agent-clis.nix. Same six that
         # twincounsel/nix's overlays.agentClis pins; keep the two lists in step.
         #
+        # The six arrive by two routes, because nixpkgs-unstable is itself too
+        # slow for a tool that ships daily: a channel advance waits on a
+        # maintainer noticing the release, then on review, then on Hydra. For
+        # the widely used packages that costs a day or two; for the quietly
+        # maintained ones it has meant weeks.
+        #
+        #   FAST LANE — claude-code, codex, antigravity-cli, grok-build. The
+        #   version and artifact come from the vendor's own release feed,
+        #   recorded in ./upstream/*.json by ./upstream/update.sh. For three of
+        #   them nixpkgs redistributes the identical prebuilt bytes, so this is
+        #   the same artifact sooner, not a different one; codex is the
+        #   exception and is described in ./upstream/codex.nix. Bump with
+        #   `make update-clis`.
+        #
+        #   CHANNEL — opencode and pi-coding-agent, taken from nixpkgs-unstable
+        #   as packaged. Both are built from source there against vendored
+        #   dependency trees, so there is no prebuilt artifact to pin and a fast
+        #   lane would mean re-implementing that vendoring. Bump with
+        #   `nix flake update nixpkgs-unstable`.
+        #
+        # Nothing here loses the escape hatch: moving a name back into the
+        # `inherit (unstable)` list below returns that CLI to whatever the
+        # channel carries, which is where it would have been.
+        inherit (unstable)
+          opencode
+          pi-coding-agent
+          ;
+
+        # The vendor manifest is the file nixpkgs' own package reads, so it is
+        # passed through unreshaped rather than rebuilt into the form the
+        # others use.
+        claude-code = unstable.claude-code.override {
+          manifest = lib.importJSON ./upstream/claude-code.json;
+        };
+
         # antigravity-cli replaced gemini-cli: Google retired Gemini CLI for
         # unpaid-tier and AI Pro/Ultra accounts, and nixpkgs now marks
         # gemini-cli with a `removal` problem (frozen at 0.47.0, warns on eval).
         # Its binary is `agy`, not `gemini`. Note `antigravity` is a DIFFERENT
         # attr — the IDE, mainProgram antigravity-ide — not the terminal client.
-        inherit (unstable)
-          claude-code
-          codex
-          antigravity-cli
-          opencode
-          pi-coding-agent
-          grok-build
-          ;
+        antigravity-cli = onUpstreamRelease unstable.antigravity-cli
+          (lib.importJSON ./upstream/antigravity-cli.json);
+
+        grok-build = onUpstreamRelease unstable.grok-build
+          (lib.importJSON ./upstream/grok-build.json);
+
+        # Not an override: nixpkgs builds codex from source, and this takes the
+        # release archive instead. See ./upstream/codex.nix.
+        codex = unstable.callPackage ./upstream/codex.nix { };
 
         ibus = prev.ibus;
         ibus_stable = prev.ibus;

@@ -76,9 +76,11 @@ in
 
           This is not a build collision — both modules read the same `pkgs`, so
           environment.systemPackages just deduplicates. The problem is subtler:
-          the two flakes pin DIFFERENT nixpkgs-unstable revisions, and whichever
-          overlay is applied last silently decides which claude-code you get.
-          Nothing in either configuration makes that visible.
+          the two flakes pin their agent CLIs independently — different
+          nixpkgs-unstable revisions for the channel lane, and their own
+          upstream/*.json release data for the fast lane — so whichever overlay
+          is applied last silently decides which claude-code you get. Nothing
+          in either configuration makes that visible.
         '';
       }
     ];
