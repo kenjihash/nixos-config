@@ -1,16 +1,13 @@
 # codex, from OpenAI's own release archive rather than built from source.
 #
 # nixpkgs builds codex with rustPlatform, which means a bump needs a recomputed
-# cargoHash and a full uncached Rust compile on every box that converges. These
-# machines want this CLI current, not built, so this takes the release archive
+# cargoHash and a full uncached Rust compile on every box that converges. The
+# fleet wants this CLI current, not built, so this takes the release archive
 # upstream already publishes and signs. update.sh records which one.
 #
-# `codex-package-*` is upstream's self-contained layout: the two binaries below
-# plus a bundled ripgrep, bubblewrap, zsh and a gstreamer voice runtime. Only
-# the binaries are installed. They are static-pie and need no patching, while
-# the bundled libraries are linked against a loader NixOS does not have --
-# ripgrep and bubblewrap come from nixpkgs on PATH instead, which is the same
-# pair nixpkgs' own build wraps codex with.
+# The daemon manager discovers and copies the complete package using
+# codex-package.json beside bin/, codex-path/ and codex-resources/. Keep the
+# real entrypoint inside that layout and put the PATH wrapper outside it.
 {
   lib,
   stdenvNoCC,
@@ -18,6 +15,9 @@
   installShellFiles,
   makeBinaryWrapper,
   versionCheckHook,
+  autoPatchelfHook,
+  stdenv,
+  ncurses,
   bubblewrap,
   ripgrep,
   data ? lib.importJSON ./codex.json,
@@ -46,6 +46,11 @@ stdenvNoCC.mkDerivation (finalAttrs: {
   nativeBuildInputs = [
     installShellFiles
     makeBinaryWrapper
+  ] ++ lib.optionals stdenvNoCC.hostPlatform.isLinux [ autoPatchelfHook ];
+
+  buildInputs = lib.optionals stdenvNoCC.hostPlatform.isLinux [
+    stdenv.cc.cc.lib
+    ncurses
   ];
 
   dontConfigure = true;
@@ -54,11 +59,10 @@ stdenvNoCC.mkDerivation (finalAttrs: {
   installPhase = ''
     runHook preInstall
 
-    install -Dm755 bin/codex $out/bin/codex
-    # Out-of-process V8 execution; codex resolves it next to its own binary.
-    install -Dm755 bin/codex-code-mode-host $out/bin/codex-code-mode-host
+    mkdir -p $out/libexec/codex $out/bin
+    cp -R bin codex-package.json codex-path codex-resources $out/libexec/codex/
 
-    wrapProgram $out/bin/codex --prefix PATH : ${
+    makeWrapper $out/libexec/codex/bin/codex $out/bin/codex --prefix PATH : ${
       lib.makeBinPath ([ ripgrep ] ++ lib.optionals stdenvNoCC.hostPlatform.isLinux [ bubblewrap ])
     }
 

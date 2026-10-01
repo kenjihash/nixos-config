@@ -68,8 +68,8 @@ update_antigravity_cli() {
 
 # codex -- OpenAI signs and publishes a SHA256SUMS file covering the
 # `codex-package-*` archives, so a bump needs no download at all. That archive
-# is the self-contained layout: upstream/codex.nix installs the two static
-# binaries from it and ignores the bundled runtime beside them.
+# is the complete layout required by the daemon manager; upstream/codex.nix
+# preserves its manifest, executables and bundled runtime.
 update_codex() {
   local repo=https://github.com/openai/codex tag version sums out sys triple asset hex
   tag=$(curl -fsSL https://api.github.com/repos/openai/codex/releases/latest | jq -er .tag_name)
