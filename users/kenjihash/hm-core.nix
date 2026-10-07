@@ -105,7 +105,9 @@ in
   # kenji.desktop.enable — off by default so headless machines get core only.
   # moshi.nix is the same shape: the moshi-hook daemon, gated by
   # kenji.moshi.enable, off by default and turned on by the loop VM.
-  imports = [ ./gui.nix ./moshi.nix ];
+  # obsidian.nix installs `ob` and runs a sync unit per kenji.obsidian.vaults
+  # entry — none by default.
+  imports = [ ./gui.nix ./moshi.nix ./obsidian.nix ];
 
   options.kenji = {
     nvim.mode = lib.mkOption {

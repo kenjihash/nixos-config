@@ -105,6 +105,10 @@
         # place or `programs.fzf.enable` fails to evaluate.
         fzf = unstable.fzf;
 
+        # Obsidian Headless (`ob`): Sync/Publish without the desktop app. Not in
+        # nixos-26.05 at all, and still an open beta that moves fast.
+        obsidian-headless = unstable.obsidian-headless;
+
         # Agent CLIs. These ship multiple times a week and nixos-26.05 froze in
         # late May — stable is ~71 patch releases behind on claude-code, and
         # neither grok-build (the real xAI CLI) nor antigravity-cli is in
