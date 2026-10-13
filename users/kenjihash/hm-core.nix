@@ -178,6 +178,7 @@ in
         eza
         fd
         fzf
+        glow
         ripgrep
         tree
         jq
