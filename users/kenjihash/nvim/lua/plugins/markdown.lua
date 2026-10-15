@@ -73,7 +73,11 @@ return {
   -- Configure render-markdown for CommonMark rendering
   {
     "MeanderingProgrammer/render-markdown.nvim",
+    ft = { "markdown", "markdown.mdx" },
+    dependencies = { "nvim-treesitter/nvim-treesitter", "nvim-mini/mini.icons" },
     opts = {
+      enabled = true,
+      file_types = { "markdown", "markdown.mdx" },
       -- CommonMark-compliant rendering
       code = {
         sign = false,
@@ -104,7 +108,7 @@ return {
         },
       },
       -- CommonMark table support
-      table = {
+      pipe_table = {
         style = "full",
         cell = "padded",
         border = {
