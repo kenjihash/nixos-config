@@ -26,6 +26,50 @@
 let
   cfg = config.kenji;
 
+  # Not packaged in our pinned nixpkgs. Upstream ships standalone Go binaries.
+  mermaidAscii = let
+    releases = {
+      aarch64-linux = {
+        name = "Linux_arm64";
+        sha256 = "b166e0b4a0c34e31068c7629333e887742af714bb42966db08adf861eb352139";
+      };
+      x86_64-linux = {
+        name = "Linux_x86_64";
+        sha256 = "9c2844824635415982a8d34be301a0abb1f64599f019892f7d844c4620ce8d41";
+      };
+      aarch64-darwin = {
+        name = "Darwin_arm64";
+        sha256 = "9b7f7788bd2596437d92856e9a60b7b05ecb5f6f786c8c0b1cb369f742bf8063";
+      };
+      x86_64-darwin = {
+        name = "Darwin_x86_64";
+        sha256 = "a0fc7b8dc4f01d0ad0afff16590d63b8a85d157cc957b2a659ffeca617360bdc";
+      };
+    };
+    release = releases.${pkgs.stdenv.hostPlatform.system};
+  in pkgs.stdenvNoCC.mkDerivation rec {
+    pname = "mermaid-ascii";
+    version = "1.6.1";
+    src = pkgs.fetchurl {
+      url = "https://github.com/AlexanderGrooff/mermaid-ascii/releases/download/${version}/mermaid-ascii_${release.name}.tar.gz";
+      inherit (release) sha256;
+    };
+    sourceRoot = ".";
+    dontBuild = true;
+    installPhase = ''
+      runHook preInstall
+      install -Dm755 mermaid-ascii "$out/bin/mermaid-ascii"
+      runHook postInstall
+    '';
+    meta = {
+      description = "Render Mermaid diagrams as terminal text";
+      homepage = "https://github.com/AlexanderGrooff/mermaid-ascii";
+      license = lib.licenses.mit;
+      platforms = builtins.attrNames releases;
+      mainProgram = "mermaid-ascii";
+    };
+  };
+
   # false under the NixOS/nix-darwin module, true under
   # home-manager.lib.homeManagerConfiguration. `submoduleSupport.enable` is
   # marked internal in home-manager, but it is the only reliable signal and is
@@ -207,6 +251,9 @@ in
         # Editor — LazyVim config is vendored + symlinked below. NOTE: mason is
         # disabled in the vendored config, so tools come from Nix, not auto-install.
         neovim
+        mermaid-cli # Markdown diagrams; wraps mmdc with Nix-managed Chromium
+        mermaidAscii # On-demand text diagrams in Neovim
+        imagemagick # Snacks image conversion and metadata
         gcc # C compiler for nvim-treesitter (main) to build parsers
         tree-sitter # tree-sitter CLI, also required by nvim-treesitter (main)
 
