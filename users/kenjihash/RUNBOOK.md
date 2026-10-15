@@ -99,6 +99,39 @@ cd ~/nixos-config && git checkout kenji
 Once `~/nixos-config/users/kenjihash/nvim` exists the dangling symlink resolves
 — restart `nvim` and LazyVim loads. No rebuild needed.
 
+### Mermaid previews over SSH and Mosh
+
+Put the cursor in a Mermaid fenced block and press `Space mp` to show or hide
+its preview below the source. `Space mm` switches between image and ASCII mode
+and clears the current preview. Rendering stays on demand; edits and window
+resizes clear stale previews. The Markdown file is never modified by previews.
+
+In a Ghostty SSH session, start Neovim with an explicit image preference:
+
+```bash
+env MERMAID_PREVIEW_MODE=image SNACKS_GHOSTTY=true nvim notes.md
+```
+
+Image mode sends PNG bytes to the terminal, including when herdr did not inherit
+SSH environment variables. Ghostty's inline graphics support is required;
+terminals with graphics support but no inline placeholders use a hover float.
+Keep `SNACKS_GHOSTTY` scoped to the Ghostty launch.
+
+In the remote shell reached through Mosh on iOS:
+
+```bash
+env MERMAID_PREVIEW_MODE=ascii nvim notes.md
+```
+
+ASCII mode uses plain text virtual lines and does not probe or send terminal
+graphics. Diagrams are sized for the current window's usable width. Diagrams
+that still exceed it open in a read-only float with wrapping disabled; use
+normal scrolling and `zh`/`zl`, then `q` or Escape to close it.
+
+Without a preference, Neovim starts in image mode. Preferences apply when a new
+Neovim process starts; when attaching to an existing herdr/Neovim session from
+another client, use `Space mm` to select the appropriate mode.
+
 ## Day-to-day rebuilds (after bootstrap)
 
 Edit config in `~/nixos-config` on the VM, then:
