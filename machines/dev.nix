@@ -1,4 +1,4 @@
-{ lib, pkgs, ... }: {
+{ config, lib, pkgs, ... }: {
   # Reuse Mitchell's VMware-Fusion-on-Apple-Silicon machine (open-vm-tools,
   # DHCP, x86 binfmt, /host mount, vm-shared base). vm-shared already sets
   # networking.hostName = "dev", so no override is needed here. We DROP its
@@ -43,6 +43,42 @@
   # DHCP-supplied resolver ahead of the pinned nameservers; resolvconf then
   # writes ONLY networking.nameservers above.
   networking.networkmanager.dns = "none";
+
+  # go-grip 0.9.2 accepts --host but still listens on :port (all addresses).
+  # Override vm-shared's disabled firewall, keeping SSH and Mosh reachable.
+  # A raw PREROUTING drop also precedes tailscaled's broad INPUT acceptance,
+  # so TCP 8090 stays private even on tailscale0. Serve connects over loopback.
+  networking.firewall = {
+    enable = lib.mkForce true;
+    allowedUDPPortRanges = [ { from = 60000; to = 61000; } ]; # Mosh
+    extraCommands = ''
+      ip46tables -t raw -D PREROUTING ! -i lo -p tcp --dport 8090 -m addrtype --dst-type LOCAL -j DROP 2>/dev/null || true
+      ip46tables -t raw -I PREROUTING ! -i lo -p tcp --dport 8090 -m addrtype --dst-type LOCAL -j DROP
+    '';
+    extraStopCommands = ''
+      ip46tables -t raw -D PREROUTING ! -i lo -p tcp --dport 8090 -m addrtype --dst-type LOCAL -j DROP 2>/dev/null || true
+    '';
+  };
+  services.tailscale.openFirewall = true;
+
+  # HTTPS stays configured across boots. Retry until the node is authenticated
+  # and HTTPS is enabled in the tailnet; no auth keys or ACL changes live here.
+  systemd.services.tailscale-serve-mdp = {
+    description = "Tailscale HTTPS proxy for Markdown previews";
+    wantedBy = [ "multi-user.target" ];
+    wants = [ "network-online.target" ];
+    requires = [ "tailscaled.service" ];
+    after = [ "network-online.target" "tailscaled.service" ];
+    unitConfig.StartLimitIntervalSec = 0;
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = "${config.services.tailscale.package}/bin/tailscale serve --bg --yes --https=443 http://127.0.0.1:8090";
+      Restart = "on-failure";
+      RestartSec = 30;
+      TimeoutStartSec = 30;
+    };
+  };
 
   #---------------------------------------------------------------------
   # Desktop: i3 ONLY (diverges from Mitchell's GNOME base + i3/plasma/

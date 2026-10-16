@@ -223,6 +223,7 @@ in
         fd
         fzf
         glow
+        go-grip # Browser Markdown/Mermaid preview via mdp
         ripgrep
         tree
         jq
@@ -291,6 +292,57 @@ in
           set -U fish_greeting ""
           fish_vi_key_bindings
         '';
+
+        functions.mdp = {
+          description = "Preview Markdown over Tailscale HTTPS on port 8090";
+          body = ''
+            if test (count $argv) -gt 1
+              printf 'Usage: mdp [file.md | directory]\n' >&2
+              return 2
+            end
+
+            set -l target $argv
+            if test (count $target) -eq 0
+              set target (fd -e md | fzf)
+              if test -z "$target"
+                return 0
+              end
+            end
+
+            if not test -e "$target"
+              printf 'mdp: path does not exist: %s\n' "$target" >&2
+              return 1
+            end
+
+            if not command -q tailscale
+              printf 'mdp: tailscale is not installed on this host\n' >&2
+              return 1
+            end
+
+            set -l preview_host (command tailscale status --json 2>/dev/null | jq -er '
+              select(.BackendState == "Running")
+              | .Self.DNSName
+              | select(type == "string" and length > 0)
+              | rtrimstr(".")
+            ' 2>/dev/null)
+            if test -z "$preview_host"
+              printf 'mdp: connect this host to Tailscale and enable MagicDNS first\n' >&2
+              return 1
+            end
+
+            set -l preview_url "https://$preview_host/"
+            printf 'Tailnet: %s\n' "$preview_url"
+            if test -d "$target"
+              # v0.9.2 serves path.Dir(argument); the slash makes that this directory.
+              set target "$target/"
+            else
+              printf 'File: %s%s\n' "$preview_url" (string escape --style=url -- (path basename -- "$target"))
+            end
+
+            # v0.9.2's --host only affects its URL; each host must firewall remote 8090.
+            command go-grip --port 8090 --host 127.0.0.1 --browser=false --no-reload=false -- "$target"
+          '';
+        };
 
         # PatrickF1/fzf.fish — the `History>` search with formatted timestamps
         # (matches the Mac), plus dir/variable/process widgets. Managed
