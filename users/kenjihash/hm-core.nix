@@ -1,9 +1,8 @@
 # The PORTABLE core of Kenji's personal home-manager layer.
 #
 # flake.nix exports this as `homeManagerModules.default`, so it is consumed by
-# FOREIGN flakes — the twincounsel team flake's mkLoopVM, per
-# docs/development/cloud-dev-vms.md rung 3. That has consequences, all
-# load-bearing:
+# foreign flakes, including the twincounsel team flake's mkLoopVM. That has
+# consequences, all load-bearing:
 #
 #   * It must NOT set `home.username` / `home.homeDirectory`. Home-manager's
 #     NixOS module sets those plainly (nixos/common.nix), and a second
@@ -151,7 +150,11 @@ in
   # kenji.moshi.enable, off by default and turned on by the loop VM.
   # obsidian.nix installs `ob` and runs a sync unit per kenji.obsidian.vaults
   # entry — none by default.
-  imports = [ ./gui.nix ./moshi.nix ./obsidian.nix ];
+  imports = [
+    ./gui.nix
+    ./moshi.nix
+    (import ./obsidian.nix { inherit inputs; })
+  ];
 
   options.kenji = {
     nvim.mode = lib.mkOption {

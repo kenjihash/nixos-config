@@ -1,10 +1,10 @@
 # Obsidian Headless (`ob`) — Obsidian Sync/Publish without the desktop app —
 # plus one systemd --user unit per vault running `ob sync --continuous`.
 #
-# The package is installed whenever pkgs carries it. It is only in
-# nixpkgs-unstable, pinned by this flake's overlay; a foreign consumer of
-# hm-core.nix whose pkgs lacks that pin just goes without, rather than failing
-# to evaluate. Unfree, and Linux-only in nixpkgs.
+# Use this flake's pinned nixpkgs-unstable so foreign consumers of hm-core.nix
+# receive the package even when their global pkgs lacks obsidian-headless.
+# Importing a separate package set also works with home-manager.useGlobalPkgs.
+# The package is unfree; installation follows its declared platform support.
 #
 # The sync units are opt-in per vault:
 #   kenji.obsidian.vaults.notes = "${config.home.homeDirectory}/notes";
@@ -18,13 +18,19 @@
 # then `systemctl --user restart obsidian-sync-<name>`. Until that is done the
 # unit fails and retries every RestartSec, which is harmless and loud in
 # `journalctl --user -u obsidian-sync-<name>`.
+{ inputs }:
+
 { config, lib, pkgs, ... }:
 
 let
   cfg = config.kenji.obsidian;
+  obsidianPkgs = import inputs.nixpkgs-unstable {
+    system = pkgs.stdenv.hostPlatform.system;
+    config.allowUnfree = true;
+  };
+  package = obsidianPkgs.obsidian-headless;
 
-  available = pkgs ? obsidian-headless
-    && lib.meta.availableOn pkgs.stdenv.hostPlatform pkgs.obsidian-headless;
+  available = lib.meta.availableOn pkgs.stdenv.hostPlatform package;
 in
 {
   options.kenji.obsidian.vaults = lib.mkOption {
@@ -39,13 +45,13 @@ in
   };
 
   config = lib.mkMerge [
-    (lib.mkIf available { home.packages = [ pkgs.obsidian-headless ]; })
+    (lib.mkIf available { home.packages = [ package ]; })
 
     (lib.mkIf (cfg.vaults != { }) {
       assertions = [
         {
           assertion = available;
-          message = "kenji.obsidian.vaults is set, but pkgs has no obsidian-headless for this platform (it comes from this flake's nixpkgs-unstable overlay, Linux only).";
+          message = "kenji.obsidian.vaults is set, but this flake's pinned obsidian-headless package does not support this platform.";
         }
       ];
 
@@ -57,7 +63,7 @@ in
           };
 
           Service = {
-            ExecStart = "${lib.getExe pkgs.obsidian-headless} sync --continuous --path ${lib.escapeShellArg path}";
+            ExecStart = "${lib.getExe package} sync --continuous --path ${lib.escapeShellArg path}";
             # ob traps SIGTERM and shuts the sync loop down itself. No
             # network-online.target ordering: the --user manager cannot see the
             # system one, so a start while offline just fails and retries.
