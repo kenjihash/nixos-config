@@ -134,7 +134,7 @@ another client, use `Space mm` to select the appropriate mode.
 
 ### Browser Markdown and Mermaid previews over Tailscale
 
-`mdp notes.md` runs go-grip in the foreground on fixed port 8090. `mdp` uses
+`mdp notes.md` runs grip-live-diff in the foreground on fixed port 8090. `mdp` uses
 the existing `fd -e md | fzf` picker (Escape exits quietly); `mdp path/to/dir`
 serves that directory's file tree. Paths containing spaces work when quoted.
 Keep the process running in your SSH/Mosh session or herdr and stop with Ctrl-C.
@@ -145,22 +145,64 @@ is no hostname or tailnet suffix to configure, and node renames take effect
 automatically. It stops with an error if Tailscale is missing, disconnected,
 or cannot provide a DNS name.
 
-Both go-grip and `mdp` live in the portable `hm-core.nix` layer exported as
+Both grip-live-diff and `mdp` live in the portable `hm-core.nix` layer exported as
 `homeManagerModules.default`, so consumers such as loop-kenji receive them
-after updating their input pin and rebuilding. The consumer must provide a
-nixpkgs with `go-grip` and install/configure Tailscale at the host level.
+after updating their input pin and rebuilding. The package is imported directly
+from `grip-live-diff.nix`; consumers need no custom overlay. They must still
+install/configure Tailscale and protect TCP 8090 at the host level.
 
-Package: `pkgs.go-grip` **0.9.2** from the existing locked nixos-26.05 input;
-no custom derivation or lock-file update. Confirmed with the packaged
-`go-grip --help` and its v0.9.2 source:
+Package: grip-live-diff **1.8.0**, using checksum-pinned upstream binaries for
+ARM64/x86-64 Linux and macOS. Upgrade the version and asset hashes together in
+`grip-live-diff.nix`, then rebuild; `grip-live-diff update` cannot replace a
+binary in the read-only Nix store. No flake input or lock-file update is needed.
 
 - `--port 8090` (`-p`) sets the port.
 - `--host 127.0.0.1` (`-H`) only sets the advertised URL in this release.
   Its listener is actually `http.ListenAndServe(":8090", ...)` on all addresses.
 - `--browser=false` (`-b=false`) prevents opening a browser on the headless VM.
 - `--no-reload=false` leaves automatic reload enabled (the default).
-- Directory browsing uses `path.Dir(argument)`, so `mdp` appends `/` to directory
-  arguments. No directory-mode flag is needed in this version.
+- Upstream serves a directory argument from its parent, even with a trailing
+  slash. `mdp directory` instead starts the server inside the chosen directory
+  with no file argument, keeping the HTTPS root at that directory. This happens
+  in a child shell, preserving the calling shell's working directory. File
+  arguments serve their containing directory, with an encoded direct file URL.
+
+Use the toolbar's **±** button (`d`) to enable word-level diffs. Choose
+**since open** (`1`), **last edit** (`2`), or **HEAD** (`3`, requires a committed
+file in a Git worktree). **Mark as read** resets the first two references; the
+HEAD reference follows Git. These references are held by the server process,
+so restarting it resets the since-open and last-edit history.
+
+For inline feedback, enable the pencil, select text, and add a comment. Adding
+a comment leaves the Markdown unchanged and writes companion files next to it:
+
+| For `notes.md` | Purpose |
+| --- | --- |
+| `notes.annotations.json5` | Selected passages, reader/agent threads, and completion status. |
+| `notes.annotations.d/<hash>.md` | Full document snapshots for versions referenced by comments. |
+| `notes.annotations.ready` | Temporary batch signal after pressing **Go** in manual mode. |
+
+These are writable files on the server, including when the browser is on a
+phone. The document's directory must be writable to save comments and snapshots.
+The server removes snapshots when no comments reference them; marking a comment
+done keeps its thread and referenced snapshot. Generated files can appear in
+`git status`; keep them untracked for personal feedback or commit them for shared
+review. Do not symlink them into the Nix store.
+
+Tell an agent to handle `notes.annotations.json5`. Its header describes the
+protocol: lock the sidecar with an exclusive `flock`, preserve reader messages,
+append replies, update passage anchors as needed, and mark handled entries done.
+In **manual** mode, comments accumulate until **Go** creates the ready file. An
+agent following the protocol claims that batch and deletes the ready file last.
+The preview does not launch an agent: monitoring/handling these files needs an
+explicit instruction to an existing agent. Switching back to **auto** removes
+the stale ready signal.
+
+Width, theme, and reload-hold preferences are writable runtime settings in the
+user config directory (`$XDG_CONFIG_HOME/grip-live-diff/settings.json`, normally
+`~/.config/grip-live-diff/settings.json` on Linux; on macOS,
+`~/Library/Application Support/grip-live-diff/settings.json`). Leave this file
+unmanaged by Home Manager so changes from the browser can persist.
 
 The dev config enables the firewall (the shared VM base disables it), preserves
 SSH TCP 22 and Mosh UDP 60000–61000, and permits Tailscale's transport UDP port.
@@ -174,7 +216,7 @@ remains reachable by Tailscale Serve.
 It retries on failure. Serve terminates HTTPS and proxies HTTP and reload
 WebSockets to localhost; only the Markdown server runs interactively.
 The root HTTPS endpoint is reserved for these previews. Until `mdp` runs, a
-proxy error is expected. go-grip also exposes the selected file's containing
+proxy error is expected. grip-live-diff also exposes the selected file's containing
 directory, so start it in a directory whose contents you intend to preview.
 
 On loop-kenji or another consumer of the portable Home Manager layer, configure
@@ -183,7 +225,7 @@ layer cannot install system services or firewall rules. Use the
 `tailscale-serve-mdp` unit and the TCP 8090 protection in `machines/dev.nix` as
 the reference, preserving that host's existing network configuration. In
 particular, merely omitting 8090 from allowed ports can leave it reachable
-through Tailscale's INPUT accept rules with go-grip 0.9.2.
+through Tailscale's INPUT accept rules with grip-live-diff 1.8.0.
 
 For a host where Serve is managed manually, after protecting port 8090:
 
@@ -228,8 +270,18 @@ After rebuilding, start a new fish shell (or `exec fish`) and verify:
    URL also lets you browse to the file.
 3. Edit and save the file from another session, changing a node label. Confirm
    both open browsers reload automatically and show the changed diagram.
-4. Try `mdp`, cancel the picker, then try `mdp /tmp/mdp-demo` and browse the directory.
-5. Inspect the VM's proxy and firewall:
+4. Try `mdp`, cancel the picker, then try `mdp /tmp/mdp-demo` and browse the
+   directory. Confirm the root lists only that directory and the calling shell's
+   working directory is unchanged after Ctrl-C. Also try quoted paths with spaces.
+5. Enable diffs, edit prose, and check since-open/last-edit highlights and
+   **Mark as read**. In a committed Git worktree, check **HEAD** too. Add a
+   comment and verify its sidecar and snapshot, then have an agent reply under
+   the sidecar lock. Check that the browser updates the thread. In manual mode,
+   press **Go** and verify the ready file is created and removed after handling.
+   Change width/theme and confirm they persist after restarting the server.
+   Exercise these writes through HTTPS as well as reloads: an HTTP 403 on a
+   write can indicate a proxy Host/Origin mismatch.
+6. Inspect the VM's proxy and firewall:
 
    ```bash
    systemctl status tailscale-serve-mdp
@@ -239,7 +291,7 @@ After rebuilding, start a new fish shell (or `exec fish`) and verify:
    sudo ip6tables -t raw -C PREROUTING ! -i lo -p tcp --dport 8090 -m addrtype --dst-type LOCAL -j DROP
    ```
 
-   The wildcard listener is expected for v0.9.2. Both firewall checks should
+   The wildcard listener is expected for v1.8.0. Both firewall checks should
    succeed. From the Mac, `curl --connect-timeout 3 http://<VM-LAN-IP>:8090/`
    and the same command with its Tailscale IP should fail while HTTPS works.
    Check IPv6 too if available. Confirm SSH and Mosh still connect.
@@ -249,7 +301,8 @@ If HTTPS was enabled after the rebuild, restart the proxy with
 the unit from the config, rebuild, then run `sudo tailscale serve --https=443 off`:
 `--bg` state persists in tailscaled even after the oneshot is stopped.
 
-References: [go-grip v0.9.2 source](https://github.com/chrishrb/go-grip/tree/v0.9.2),
+References: [grip-live-diff v1.8.0 usage](https://github.com/babs/grip-live-diff/blob/v1.8.0/README.md),
+[release assets](https://github.com/babs/grip-live-diff/releases/tag/v1.8.0),
 [Tailscale Serve](https://tailscale.com/docs/reference/tailscale-cli/serve),
 [ACL syntax](https://tailscale.com/docs/reference/syntax/policy-file).
 

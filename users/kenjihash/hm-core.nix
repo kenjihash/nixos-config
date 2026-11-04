@@ -25,6 +25,9 @@
 let
   cfg = config.kenji;
 
+  # Local package so foreign consumers of this module need no custom overlay.
+  gripLiveDiff = pkgs.callPackage ./grip-live-diff.nix { };
+
   # Not packaged in our pinned nixpkgs. Upstream ships standalone Go binaries.
   mermaidAscii = let
     releases = {
@@ -226,7 +229,7 @@ in
         fd
         fzf
         glow
-        go-grip # Browser Markdown/Mermaid preview via mdp
+        gripLiveDiff # Browser Markdown/Mermaid preview with live diffs via mdp
         ripgrep
         tree
         jq
@@ -335,15 +338,22 @@ in
 
             set -l preview_url "https://$preview_host/"
             printf 'Tailnet: %s\n' "$preview_url"
-            if test -d "$target"
-              # v0.9.2 serves path.Dir(argument); the slash makes that this directory.
-              set target "$target/"
-            else
+            if not test -d "$target"
               printf 'File: %s%s\n' "$preview_url" (string escape --style=url -- (path basename -- "$target"))
             end
 
-            # v0.9.2's --host only affects its URL; each host must firewall remote 8090.
-            command go-grip --port 8090 --host 127.0.0.1 --browser=false --no-reload=false -- "$target"
+            # --host only affects the URL; each host must firewall remote 8090.
+            # v1.8.0 serves directory arguments from their parent. Run inside the
+            # selected directory instead, in a child shell so our cwd stays put.
+            command ${pkgs.fish}/bin/fish --no-config -c '
+              set -l target "$argv[1]"
+              set -l preview_args --port 8090 --host 127.0.0.1 --browser=false --no-reload=false
+              if test -d "$target"
+                cd -- "$target"; or exit 1
+                exec ${lib.getExe gripLiveDiff} $preview_args
+              end
+              exec ${lib.getExe gripLiveDiff} $preview_args -- "$target"
+            ' -- "$target"
           '';
         };
 
