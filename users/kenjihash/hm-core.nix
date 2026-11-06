@@ -28,6 +28,10 @@ let
   # Local package so foreign consumers of this module need no custom overlay.
   gripLiveDiff = pkgs.callPackage ./grip-live-diff.nix { };
 
+  # Not in stable nixpkgs; use our pinned unstable input without requiring a
+  # custom overlay from foreign consumers of this module.
+  tuicr = inputs.nixpkgs-unstable.legacyPackages.${pkgs.stdenv.hostPlatform.system}.tuicr;
+
   # Not packaged in our pinned nixpkgs. Upstream ships standalone Go binaries.
   mermaidAscii = let
     releases = {
@@ -246,6 +250,7 @@ in
         # Agent-harness power tools (what Claude Code / Codex shell out to)
         ast-grep
         delta
+        tuicr
         jc
         shellcheck
         shfmt
