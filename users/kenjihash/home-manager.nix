@@ -14,6 +14,9 @@
 {
   imports = [ (import ./hm-core.nix { inherit inputs isWSL; }) ];
 
+  # Trial asynchronous direnv locally; the exported core defaults to off.
+  kenji.direnvInstant.enable = true;
+
   # I edit nvim lua on these boxes, so ~/.config/nvim must be writable and
   # lazy.nvim must be able to update lazy-lock.json. A loop VM gets "store".
   kenji.nvim.mode = "outOfStore";

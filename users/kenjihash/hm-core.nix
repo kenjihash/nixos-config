@@ -158,12 +158,15 @@ in
   # obsidian.nix installs `ob` and runs a sync unit per kenji.obsidian.vaults
   # entry — none by default.
   imports = [
+    inputs.direnv-instant.homeModules.direnv-instant
     ./gui.nix
     ./moshi.nix
     (import ./obsidian.nix { inherit inputs; })
   ];
 
   options.kenji = {
+    direnvInstant.enable = lib.mkEnableOption "asynchronous direnv shell integration";
+
     nvim.mode = lib.mkOption {
       type = lib.types.enum [ "store" "outOfStore" "none" ];
       default = "store";
@@ -286,6 +289,8 @@ in
       #---------------------------------------------------------------------
       # Env
       #---------------------------------------------------------------------
+      home.sessionPath = [ "${config.home.homeDirectory}/.local/bin" ];
+
       home.sessionVariables = {
         LANG = "en_US.UTF-8";
         LC_ALL = "en_US.UTF-8";
@@ -397,6 +402,10 @@ in
         enable = true;
         nix-direnv.enable = true;
       };
+
+      # The module replaces direnv's shell hooks and keeps nix-direnv's cache.
+      # Foreign consumers keep synchronous hooks unless they opt in.
+      programs.direnv-instant.enable = cfg.direnvInstant.enable;
 
       # herdr multiplexer config (vendored). Only config.toml is symlinked, so
       # herdr's runtime state (sessions, logs, sockets) stays writable in

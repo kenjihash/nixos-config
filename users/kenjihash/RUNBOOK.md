@@ -3,6 +3,21 @@
 Personal runbook for standing up / re-bootstrapping the local `dev` NixOS VM.
 All commands run **from the Mac** unless marked `# on the VM`.
 
+## Shell environment
+
+The portable Home Manager profile adds `~/.local/bin` to the session path.
+The local `dev` profile also enables `kenji.direnvInstant.enable`, which loads
+direnv environments asynchronously while keeping nix-direnv's cache. The
+exported module and standalone profiles leave this option off by default.
+
+After applying the configuration, start a new fish shell and enter a project
+with an allowed `.envrc`. Check that the expected tools and environment appear
+once direnv finishes, and that leaving the project unloads the environment.
+The prompt can return before the project environment is ready.
+
+To return to synchronous hooks, set `kenji.direnvInstant.enable = false;` in
+`users/kenjihash/home-manager.nix` and apply the configuration again.
+
 ## 0. Host prerequisites (do these first, every fresh VM)
 
 - **Network adapter = Bridged.** VMware Fusion's NAT DNS is broken on macOS
