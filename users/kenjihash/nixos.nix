@@ -5,7 +5,12 @@
   # and enabled per-machine — the same shape as gui.nix / kenji.desktop.enable.
   # Default off; `dev` deliberately leaves it off because twincounsel's devtools
   # module is the provider there.
-  imports = [ ../../modules/agent-clis.nix ];
+  imports = [
+    ../../modules/agent-clis.nix
+    # System service only: importing homeManagerModules.default on loop-kenji
+    # leaves its team-managed Rex installation and account policy alone.
+    inputs.rex.nixosModules.default
+  ];
 
   # https://github.com/nix-community/home-manager/pull/2408
   environment.pathsToLink = [ "/share/fish" ];

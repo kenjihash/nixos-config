@@ -167,6 +167,13 @@ in
   options.kenji = {
     direnvInstant.enable = lib.mkEnableOption "asynchronous direnv shell integration";
 
+    mdp.httpsPort = lib.mkOption {
+      type = lib.types.port;
+      default = 443;
+      example = 7297;
+      description = "Tailscale Serve HTTPS port for Markdown previews; must match the host's Serve mapping.";
+    };
+
     nvim.mode = lib.mkOption {
       type = lib.types.enum [ "store" "outOfStore" "none" ];
       default = "store";
@@ -346,7 +353,7 @@ in
               return 1
             end
 
-            set -l preview_url "https://$preview_host/"
+            set -l preview_url "https://$preview_host${lib.optionalString (cfg.mdp.httpsPort != 443) ":${toString cfg.mdp.httpsPort}"}/"
             printf 'Tailnet: %s\n' "$preview_url"
             if not test -d "$target"
               printf 'File: %s%s\n' "$preview_url" (string escape --style=url -- (path basename -- "$target"))

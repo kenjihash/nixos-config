@@ -58,6 +58,11 @@
     # home-manager layer via inputs.herdr.packages.<system>.default.
     herdr.url = "github:ogulcancelik/herdr";
 
+    rex = {
+      url = "https://pkgs.superlogical.com/rex/nix/preview.tar.gz";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Non-flakes
     theme-bobthefish.url = "github:oh-my-fish/theme-bobthefish/e3b4d4eafc23516e35f162686f08a42edf844e40";
     theme-bobthefish.flake = false;
@@ -210,6 +215,10 @@
       };
   in {
     homeManagerModules.default = personalModule;
+
+    packages = nixpkgs.lib.genAttrs [ "x86_64-linux" "aarch64-linux" ] (system: {
+      rex = inputs.rex.packages.${system}.rex;
+    });
 
     # Arch parity with the cloud loop VM (x86_64), plus this box's arch. Build
     # gates only — `nix flake check` cannot see these outputs, so the Makefile's

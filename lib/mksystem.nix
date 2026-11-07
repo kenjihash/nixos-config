@@ -30,6 +30,9 @@ let
 in systemFunc rec {
   inherit system;
 
+  # Flake modules must be available while resolving imports, before config.
+  specialArgs = { inherit inputs; };
+
   modules = [
     # Apply our overlays. Overlays are keyed by system type so we have
     # to go through and apply our system type. We do this first so
@@ -90,7 +93,6 @@ in systemFunc rec {
         currentSystemName = name;
         currentSystemUser = user;
         isWSL = isWSL;
-        inputs = inputs;
       };
     }
   ];

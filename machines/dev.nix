@@ -61,6 +61,22 @@
   };
   services.tailscale.openFirewall = true;
 
+  # Use this VM's existing Tailscale identity and run sessions as its local
+  # account. The portable Home Manager export does not enable or install Rex.
+  services.rex.loginServer = {
+    enable = true;
+    socketActivation = true;
+    accounts.kenjihash.principals = [ "tailscale:kenji@twincounsel.com" ];
+    defaults."tailscale:kenji@twincounsel.com" = "kenjihash";
+    tailscaleServe = {
+      enable = true;
+      httpsPort = 443;
+    };
+  };
+
+  # Rex uses the root HTTPS endpoint, so previews have their own HTTPS port.
+  home-manager.users.kenjihash.kenji.mdp.httpsPort = 7297;
+
   # HTTPS stays configured across boots. Retry until the node is authenticated
   # and HTTPS is enabled in the tailnet; no auth keys or ACL changes live here.
   systemd.services.tailscale-serve-mdp = {
@@ -73,7 +89,7 @@
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
-      ExecStart = "${config.services.tailscale.package}/bin/tailscale serve --bg --yes --https=443 http://127.0.0.1:8090";
+      ExecStart = "${config.services.tailscale.package}/bin/tailscale serve --bg --yes --https=${toString config.home-manager.users.kenjihash.kenji.mdp.httpsPort} http://127.0.0.1:8090";
       Restart = "on-failure";
       RestartSec = 30;
       TimeoutStartSec = 30;
