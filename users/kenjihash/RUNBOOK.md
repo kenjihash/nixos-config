@@ -189,80 +189,54 @@ and [remote access](https://www.superlogical.com/rex/docs/linux/remote-access#ni
 
 ### Browser Markdown and Mermaid previews over Tailscale
 
-`mdp notes.md` runs grip-live-diff in the foreground on fixed port 8090. `mdp` uses
-the existing `fd -e md | fzf` picker (Escape exits quietly); `mdp path/to/dir`
-serves that directory's file tree. Paths containing spaces work when quoted.
-Keep the process running in your SSH/Mosh session or herdr and stop with Ctrl-C.
-The function prints the tailnet root URL and, for a file, its direct preview URL.
-The function reads this node's `.Self.DNSName` from `tailscale status --json`
-each time it runs, removing the trailing dot to construct the HTTPS URL. There
-is no hostname or tailnet suffix to configure, and node renames take effect
-automatically. It stops with an error if Tailscale is missing, disconnected,
-or cannot provide a DNS name.
+`mdp notes.md` runs Crit on fixed loopback port 8090. `mdp` uses the
+`fd -e md | fzf --multi` picker (Tab selects multiple files, Enter opens the
+review, Escape exits quietly). `mdp plan.md api-spec.md` reviews selected files
+together; `mdp path/to/dir` loads that directory recursively into a review.
+Paths containing spaces work when quoted. Keep the CLI running in your
+SSH/Mosh session or herdr and stop with Ctrl-C. Stop the previous preview before
+starting another on the same port; `crit stop` from that project also stops a
+single remaining session.
 
-`kenji.mdp.httpsPort` controls the printed URL's port and defaults to 443 for
-portable consumers. `dev` sets it to 7297 and uses that same value for its
-Serve mapping. Configure the option to match Serve on any other host; the
-`loop-kenji` team profile supplies its own `mdp` wrapper and port.
+The function prints the tailnet root URL, where Crit displays the review.
+It reads this node's `.Self.DNSName` from `tailscale status --json` each time,
+removing the trailing dot. Node renames take effect automatically. It stops
+with an error if Tailscale is missing, disconnected, or cannot provide a DNS name.
+`kenji.mdp.httpsPort` defaults to 443 for portable consumers; `dev` sets it to
+7297 to match Serve. The `loop-kenji` team profile supplies its own `mdp` wrapper
+and will need the same backend change separately.
 
-Both grip-live-diff and `mdp` live in the portable `hm-core.nix` layer exported as
-`homeManagerModules.default`, so consumers such as loop-kenji receive them
-after updating their input pin and rebuilding. The package is imported directly
-from `grip-live-diff.nix`; consumers need no custom overlay. They must still
-install/configure Tailscale and protect TCP 8090 at the host level.
+Crit and `mdp` live in the portable `hm-core.nix` layer exported as
+`homeManagerModules.default`. The local `crit.nix` package pins **0.23.2** and
+upstream SHA-256 digests for ARM64/x86-64 Linux and macOS. No overlay or new flake
+input is needed. Upgrade the version and asset hashes together, then rebuild.
+The prior `grip-live-diff.nix` package remains available as a reference.
 
-Package: grip-live-diff **1.8.0**, using checksum-pinned upstream binaries for
-ARM64/x86-64 Linux and macOS. Upgrade the version and asset hashes together in
-`grip-live-diff.nix`, then rebuild; `grip-live-diff update` cannot replace a
-binary in the read-only Nix store. No flake input or lock-file update is needed.
+The wrapper passes `--port 8090 --host 127.0.0.1 --no-open`, plus
+`--public-url` with the printed HTTPS URL and `--allow-unauthenticated-network`.
+Crit actually binds to loopback. The public URL allows the proxy hostname
+through Crit's Host validation; the acknowledgment flag is required even with
+a loopback listener when advertising a public URL. Tailscale controls access.
+The existing Serve mapping and firewall rules remain in place.
 
-- `--port 8090` (`-p`) sets the port.
-- `--host 127.0.0.1` (`-H`) only sets the advertised URL in this release.
-  Its listener is actually `http.ListenAndServe(":8090", ...)` on all addresses.
-- `--browser=false` (`-b=false`) prevents opening a browser on the headless VM.
-- `--no-reload=false` leaves automatic reload enabled (the default).
-- Upstream serves a directory argument from its parent, even with a trailing
-  slash. `mdp directory` instead starts the server inside the chosen directory
-  with no file argument, keeping the HTTPS root at that directory. This happens
-  in a child shell, preserving the calling shell's working directory. File
-  arguments serve their containing directory, with an encoded direct file URL.
+Markdown and Mermaid render in the review. When a document changes during a
+review, click **Reload** in Crit's notification. Diffs compare review rounds;
+the prior Grip since-open/last-edit/HEAD controls are not part of this workflow.
+Use **Finish Review** to hand feedback to an agent, or **Approve** when finished.
 
-Use the toolbar's **±** button (`d`) to enable word-level diffs. Choose
-**since open** (`1`), **last edit** (`2`), or **HEAD** (`3`, requires a committed
-file in a Git worktree). **Mark as read** resets the first two references; the
-HEAD reference follows Git. These references are held by the server process,
-so restarting it resets the since-open and last-edit history.
+Comments and snapshots live under `~/.crit/reviews/<session>/`, rather than Grip's
+adjacent annotation sidecars. `crit status` shows active session IDs and paths;
+`crit comments --session <id> --json` reads unresolved feedback. Give an existing
+agent that session or review path. Crit does not launch an agent by default.
+Agent integrations can be installed separately with `crit install <agent>`.
+Approval stops the review daemon and, by default, removes the review file; set
+`"cleanup_on_approve": false` in `~/.crit.config.json` to preserve review history.
+Do not manage writable review files as Nix-store symlinks.
 
-For inline feedback, enable the pencil, select text, and add a comment. Adding
-a comment leaves the Markdown unchanged and writes companion files next to it:
-
-| For `notes.md` | Purpose |
-| --- | --- |
-| `notes.annotations.json5` | Selected passages, reader/agent threads, and completion status. |
-| `notes.annotations.d/<hash>.md` | Full document snapshots for versions referenced by comments. |
-| `notes.annotations.ready` | Temporary batch signal after pressing **Go** in manual mode. |
-
-These are writable files on the server, including when the browser is on a
-phone. The document's directory must be writable to save comments and snapshots.
-The server removes snapshots when no comments reference them; marking a comment
-done keeps its thread and referenced snapshot. Generated files can appear in
-`git status`; keep them untracked for personal feedback or commit them for shared
-review. Do not symlink them into the Nix store.
-
-Tell an agent to handle `notes.annotations.json5`. Its header describes the
-protocol: lock the sidecar with an exclusive `flock`, preserve reader messages,
-append replies, update passage anchors as needed, and mark handled entries done.
-In **manual** mode, comments accumulate until **Go** creates the ready file. An
-agent following the protocol claims that batch and deletes the ready file last.
-The preview does not launch an agent: monitoring/handling these files needs an
-explicit instruction to an existing agent. Switching back to **auto** removes
-the stale ready signal.
-
-Width, theme, and reload-hold preferences are writable runtime settings in the
-user config directory (`$XDG_CONFIG_HOME/grip-live-diff/settings.json`, normally
-`~/.config/grip-live-diff/settings.json` on Linux; on macOS,
-`~/Library/Application Support/grip-live-diff/settings.json`). Leave this file
-unmanaged by Home Manager so changes from the browser can persist.
+Prefer individual files or directories inside Git repositories.
+In 0.23.2, a directory outside Git with nested documents can choose the first
+nested file's parent as its review root. Sibling paths then become absolute,
+which the comment CLI rejects. Browser comments still work in that case.
 
 The dev config enables the firewall (the shared VM base disables it), preserves
 SSH TCP 22 and Mosh UDP 60000–61000, and permits Tailscale's transport UDP port.
@@ -273,19 +247,19 @@ remains reachable by Tailscale Serve.
 
 `tailscale-serve-mdp.service` declaratively runs
 `tailscale serve --bg --yes --https=7297 http://127.0.0.1:8090` after tailscaled.
-It retries on failure. Serve terminates HTTPS and proxies HTTP and reload
-WebSockets to localhost; only the Markdown server runs interactively.
+It retries on failure. Serve terminates HTTPS and proxies HTTP and review
+event streams to localhost; only the Markdown server runs interactively.
 The HTTPS 7297 endpoint is reserved for these previews. Until `mdp` runs, a
-proxy error is expected. grip-live-diff also exposes the selected file's containing
-directory, so start it in a directory whose contents you intend to preview.
+proxy error is expected. Start reviews in a directory whose contents you intend
+to make available to devices with access to this endpoint.
 
 On loop-kenji or another consumer of the portable Home Manager layer, configure
 Serve and the firewall in that machine's NixOS config: the shared Home Manager
 layer cannot install system services or firewall rules. Use the
 `tailscale-serve-mdp` unit and the TCP 8090 protection in `machines/dev.nix` as
 the reference, preserving that host's existing network configuration. In
-particular, merely omitting 8090 from allowed ports can leave it reachable
-through Tailscale's INPUT accept rules with grip-live-diff 1.8.0.
+particular, retain the explicit port protection when testing other preview
+servers that may bind to all addresses.
 
 For a host where Serve is managed manually, after protecting port 8090:
 
@@ -327,22 +301,17 @@ After rebuilding, start a new fish shell (or `exec fish`) and verify:
    mdp /tmp/mdp-demo/README.md
    ````
 
-2. Open the printed **File** HTTPS URL on both Mac and iPhone while connected to
-   Tailscale. Confirm the Mermaid block renders as a diagram. The printed root
-   URL also lets you browse to the file.
-3. Edit and save the file from another session, changing a node label. Confirm
-   both open browsers reload automatically and show the changed diagram.
-4. Try `mdp`, cancel the picker, then try `mdp /tmp/mdp-demo` and browse the
-   directory. Confirm the root lists only that directory and the calling shell's
-   working directory is unchanged after Ctrl-C. Also try quoted paths with spaces.
-5. Enable diffs, edit prose, and check since-open/last-edit highlights and
-   **Mark as read**. In a committed Git worktree, check **HEAD** too. Add a
-   comment and verify its sidecar and snapshot, then have an agent reply under
-   the sidecar lock. Check that the browser updates the thread. In manual mode,
-   press **Go** and verify the ready file is created and removed after handling.
-   Change width/theme and confirm they persist after restarting the server.
-   Exercise these writes through HTTPS as well as reloads: an HTTP 403 on a
-   write can indicate a proxy Host/Origin mismatch.
+2. Open the printed **Tailnet** HTTPS URL on Mac and iPhone while connected to
+   Tailscale. Confirm the Mermaid block renders as a diagram.
+3. Edit and save the file from another session, changing a node label. Click
+   **Reload** in each browser and confirm the diagram changes.
+4. Try `mdp`, cancel the picker, then try `mdp /tmp/mdp-demo`. Confirm the review
+   lists the document and the calling shell's working directory is unchanged
+   after Ctrl-C. Also try quoted paths with spaces.
+5. Add a comment through HTTPS and read it with `crit comments --session <id>
+   --json` from another shell. Have an agent handle the feedback, then review
+   the next round and try the diff view. An HTTP 403 can indicate a missing or
+   mismatched `--public-url`.
 6. Inspect the VM's proxy and firewall:
 
    ```bash
@@ -353,7 +322,7 @@ After rebuilding, start a new fish shell (or `exec fish`) and verify:
    sudo ip6tables -t raw -C PREROUTING ! -i lo -p tcp --dport 8090 -m addrtype --dst-type LOCAL -j DROP
    ```
 
-   The wildcard listener is expected for v1.8.0. Both firewall checks should
+   The listener should be `127.0.0.1:8090`. Both firewall checks should
    succeed. From the Mac, `curl --connect-timeout 3 http://<VM-LAN-IP>:8090/`
    and the same command with its Tailscale IP should fail while HTTPS works.
    Check IPv6 too if available. Confirm SSH and Mosh still connect.
@@ -363,8 +332,8 @@ If HTTPS was enabled after the rebuild, restart the proxy with
 the unit from the config, rebuild, then run `sudo tailscale serve --https=7297 off`:
 `--bg` state persists in tailscaled even after the oneshot is stopped.
 
-References: [grip-live-diff v1.8.0 usage](https://github.com/babs/grip-live-diff/blob/v1.8.0/README.md),
-[release assets](https://github.com/babs/grip-live-diff/releases/tag/v1.8.0),
+References: [Crit v0.23.2 usage](https://github.com/tomasz-tomczyk/crit/blob/v0.23.2/README.md),
+[release assets](https://github.com/tomasz-tomczyk/crit/releases/tag/v0.23.2),
 [Tailscale Serve](https://tailscale.com/docs/reference/tailscale-cli/serve),
 [ACL syntax](https://tailscale.com/docs/reference/syntax/policy-file).
 

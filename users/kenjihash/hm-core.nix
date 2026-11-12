@@ -26,7 +26,7 @@ let
   cfg = config.kenji;
 
   # Local package so foreign consumers of this module need no custom overlay.
-  gripLiveDiff = pkgs.callPackage ./grip-live-diff.nix { };
+  crit = pkgs.callPackage ./crit.nix { };
 
   # Not in stable nixpkgs; use our pinned unstable input without requiring a
   # custom overlay from foreign consumers of this module.
@@ -243,7 +243,7 @@ in
         fd
         fzf
         glow
-        gripLiveDiff # Browser Markdown/Mermaid preview with live diffs via mdp
+        crit # Browser Markdown/Mermaid review with inline comments via mdp
         ripgrep
         tree
         jq
@@ -317,24 +317,21 @@ in
         '';
 
         functions.mdp = {
-          description = "Preview Markdown over Tailscale HTTPS on port 8090";
+          description = "Review Markdown with Crit over Tailscale HTTPS on port 8090";
           body = ''
-            if test (count $argv) -gt 1
-              printf 'Usage: mdp [file.md | directory]\n' >&2
-              return 2
-            end
-
-            set -l target $argv
-            if test (count $target) -eq 0
-              set target (fd -e md | fzf)
-              if test -z "$target"
+            set -l targets $argv
+            if test (count $targets) -eq 0
+              set targets (fd -e md | fzf --multi)
+              if test (count $targets) -eq 0
                 return 0
               end
             end
 
-            if not test -e "$target"
-              printf 'mdp: path does not exist: %s\n' "$target" >&2
-              return 1
+            for target in $targets
+              if not test -e "$target"
+                printf 'mdp: path does not exist: %s\n' "$target" >&2
+                return 1
+              end
             end
 
             if not command -q tailscale
@@ -355,22 +352,12 @@ in
 
             set -l preview_url "https://$preview_host${lib.optionalString (cfg.mdp.httpsPort != 443) ":${toString cfg.mdp.httpsPort}"}/"
             printf 'Tailnet: %s\n' "$preview_url"
-            if not test -d "$target"
-              printf 'File: %s%s\n' "$preview_url" (string escape --style=url -- (path basename -- "$target"))
-            end
 
-            # --host only affects the URL; each host must firewall remote 8090.
-            # v1.8.0 serves directory arguments from their parent. Run inside the
-            # selected directory instead, in a child shell so our cwd stays put.
-            command ${pkgs.fish}/bin/fish --no-config -c '
-              set -l target "$argv[1]"
-              set -l preview_args --port 8090 --host 127.0.0.1 --browser=false --no-reload=false
-              if test -d "$target"
-                cd -- "$target"; or exit 1
-                exec ${lib.getExe gripLiveDiff} $preview_args
-              end
-              exec ${lib.getExe gripLiveDiff} $preview_args -- "$target"
-            ' -- "$target"
+            # Crit serves the review at / and validates the proxy hostname.
+            # Keep the CLI in the foreground so Ctrl-C stops its new daemon.
+            command ${lib.getExe crit} --port 8090 --host 127.0.0.1 --no-open \
+              --public-url "$preview_url" --allow-unauthenticated-network \
+              -- (path resolve -- $targets)
           '';
         };
 
