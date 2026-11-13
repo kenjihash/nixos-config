@@ -44,7 +44,7 @@
   # writes ONLY networking.nameservers above.
   networking.networkmanager.dns = "none";
 
-  # Keep preview port 8090 private, including when trying alternate backends.
+  # Plannotator remote mode binds all interfaces; keep port 8090 private.
   # Override vm-shared's disabled firewall, keeping SSH and Mosh reachable.
   # A raw PREROUTING drop also precedes tailscaled's broad INPUT acceptance,
   # so TCP 8090 stays private even on tailscale0. Serve connects over loopback.

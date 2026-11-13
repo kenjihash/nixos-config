@@ -26,7 +26,7 @@ let
   cfg = config.kenji;
 
   # Local package so foreign consumers of this module need no custom overlay.
-  crit = pkgs.callPackage ./crit.nix { };
+  plannotator = pkgs.callPackage ./plannotator.nix { };
 
   # Not in stable nixpkgs; use our pinned unstable input without requiring a
   # custom overlay from foreign consumers of this module.
@@ -243,7 +243,7 @@ in
         fd
         fzf
         glow
-        crit # Browser Markdown/Mermaid review with inline comments via mdp
+        plannotator # Browser Markdown/Mermaid review and annotations via mdp
         ripgrep
         tree
         jq
@@ -317,7 +317,7 @@ in
         '';
 
         functions.mdp = {
-          description = "Review Markdown with Crit over Tailscale HTTPS on port 8090";
+          description = "Review Markdown with Plannotator over Tailscale HTTPS on port 8090";
           body = ''
             set -l targets $argv
             if test (count $targets) -eq 0
@@ -331,6 +331,15 @@ in
               if not test -e "$target"
                 printf 'mdp: path does not exist: %s\n' "$target" >&2
                 return 1
+              end
+            end
+
+            if test (count $targets) -gt 1
+              for target in $targets
+                if test -d "$target"
+                  printf 'mdp: Plannotator accepts multiple files or one directory, not a mix of both\n' >&2
+                  return 2
+                end
               end
             end
 
@@ -353,11 +362,14 @@ in
             set -l preview_url "https://$preview_host${lib.optionalString (cfg.mdp.httpsPort != 443) ":${toString cfg.mdp.httpsPort}"}/"
             printf 'Tailnet: %s\n' "$preview_url"
 
-            # Crit serves the review at / and validates the proxy hostname.
-            # Keep the CLI in the foreground so Ctrl-C stops its new daemon.
-            command ${lib.getExe crit} --port 8090 --host 127.0.0.1 --no-open \
-              --public-url "$preview_url" --allow-unauthenticated-network \
-              -- (path resolve -- $targets)
+            # Remote mode enables compressed assets and proxy Host handling.
+            # It binds all interfaces; the host must protect TCP 8090.
+            # Keep reviews standalone: no AI, sharing, or Serve changes.
+            command env PLANNOTATOR_REMOTE=1 PLANNOTATOR_PORT=8090 \
+              PLANNOTATOR_PUBLIC_URL="$preview_url" PLANNOTATOR_BROWSER=none \
+              PLANNOTATOR_AI=disabled PLANNOTATOR_SHARE=disabled \
+              PLANNOTATOR_TAILSCALE=0 PLANNOTATOR_AGENT_TERMINAL_REMOTE=0 \
+              ${lib.getExe plannotator} annotate (path resolve -- $targets)
           '';
         };
 

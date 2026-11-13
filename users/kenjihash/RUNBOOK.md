@@ -189,54 +189,52 @@ and [remote access](https://www.superlogical.com/rex/docs/linux/remote-access#ni
 
 ### Browser Markdown and Mermaid previews over Tailscale
 
-`mdp notes.md` runs Crit on fixed loopback port 8090. `mdp` uses the
+`mdp notes.md` runs Plannotator on fixed port 8090. `mdp` uses the
 `fd -e md | fzf --multi` picker (Tab selects multiple files, Enter opens the
 review, Escape exits quietly). `mdp plan.md api-spec.md` reviews selected files
-together; `mdp path/to/dir` loads that directory recursively into a review.
-Paths containing spaces work when quoted. Keep the CLI running in your
-SSH/Mosh session or herdr and stop with Ctrl-C. Stop the previous preview before
-starting another on the same port; `crit stop` from that project also stops a
-single remaining session.
+together; `mdp path/to/dir` opens that directory's document browser. Plannotator
+accepts several files or one directory, but not a mixture of both. Quote paths
+containing spaces. The calling shell's working directory is preserved.
 
-The function prints the tailnet root URL, where Crit displays the review.
+Keep the CLI running in your SSH/Mosh session or herdr. Submitting annotations
+prints feedback to that terminal and ends the session; Ctrl-C also stops it.
+Stop the current review before starting another on the same port.
+
+The function prints the tailnet root URL, where Plannotator displays the review.
 It reads this node's `.Self.DNSName` from `tailscale status --json` each time,
 removing the trailing dot. Node renames take effect automatically. It stops
 with an error if Tailscale is missing, disconnected, or cannot provide a DNS name.
 `kenji.mdp.httpsPort` defaults to 443 for portable consumers; `dev` sets it to
 7297 to match Serve. The `loop-kenji` team profile supplies its own `mdp` wrapper
-and will need the same backend change separately.
+and needs the corresponding backend change separately.
 
-Crit and `mdp` live in the portable `hm-core.nix` layer exported as
-`homeManagerModules.default`. The local `crit.nix` package pins **0.23.2** and
-upstream SHA-256 digests for ARM64/x86-64 Linux and macOS. No overlay or new flake
-input is needed. Upgrade the version and asset hashes together, then rebuild.
-The prior `grip-live-diff.nix` package remains available as a reference.
+Plannotator and `mdp` live in the portable `hm-core.nix` layer exported as
+`homeManagerModules.default`. `plannotator.nix` pins the binary-only **0.28.62**
+release and upstream SHA-256 digests for ARM64/x86-64 Linux and macOS. No overlay
+or new flake input is needed. Upgrade the version and asset hashes together,
+then rebuild. The package patches the Linux loader for NixOS and preserves
+Bun's embedded application payload. It never runs the upstream installer or
+installs agent hooks, skills, or sidecars.
 
-The wrapper passes `--port 8090 --host 127.0.0.1 --no-open`, plus
-`--public-url` with the printed HTTPS URL and `--allow-unauthenticated-network`.
-Crit actually binds to loopback. The public URL allows the proxy hostname
-through Crit's Host validation; the acknowledgment flag is required even with
-a loopback listener when advertising a public URL. Tailscale controls access.
-The existing Serve mapping and firewall rules remain in place.
+The wrapper sets `PLANNOTATOR_REMOTE=1`, `PLANNOTATOR_PORT=8090`, and
+`PLANNOTATOR_PUBLIC_URL` to the printed HTTPS origin. Remote mode enables
+compressed browser assets and proxy Host validation; it binds `0.0.0.0:8090`,
+so host-level port protection is required. `PLANNOTATOR_BROWSER=none` suppresses
+browser opening on the VM. The wrapper disables built-in AI, sharing, the
+remote agent terminal, and Plannotator-managed Tailscale mappings for these
+reviews; it does not change global Plannotator settings. Serve remains managed
+by the existing host configuration.
 
-Markdown and Mermaid render in the review. When a document changes during a
-review, click **Reload** in Crit's notification. Diffs compare review rounds;
-the prior Grip since-open/last-edit/HEAD controls are not part of this workflow.
-Use **Finish Review** to hand feedback to an agent, or **Approve** when finished.
+Markdown and Mermaid render in the review. Changes to supported Markdown source
+files update within the app; rendered HTML files offer **Refresh from disk**.
+Use the version-history diff to compare revisions. Comments, drafts, versions,
+and submitted feedback are kept in Plannotator's data directory, normally
+`~/.plannotator`; `plannotator data-dir` prints the actual location. Leave this
+writable runtime data outside the Nix store.
 
-Comments and snapshots live under `~/.crit/reviews/<session>/`, rather than Grip's
-adjacent annotation sidecars. `crit status` shows active session IDs and paths;
-`crit comments --session <id> --json` reads unresolved feedback. Give an existing
-agent that session or review path. Crit does not launch an agent by default.
-Agent integrations can be installed separately with `crit install <agent>`.
-Approval stops the review daemon and, by default, removes the review file; set
-`"cleanup_on_approve": false` in `~/.crit.config.json` to preserve review history.
-Do not manage writable review files as Nix-store symlinks.
-
-Prefer individual files or directories inside Git repositories.
-In 0.23.2, a directory outside Git with nested documents can choose the first
-nested file's parent as its review root. Sibling paths then become absolute,
-which the comment CLI rejects. Browser comments still work in that case.
+Submitting annotations returns feedback to the invoking terminal. Give that
+feedback to your existing agent; `mdp` does not launch or configure an agent.
+Agent integrations can be installed separately if automatic delivery is wanted.
 
 The dev config enables the firewall (the shared VM base disables it), preserves
 SSH TCP 22 and Mosh UDP 60000–61000, and permits Tailscale's transport UDP port.
@@ -258,8 +256,8 @@ Serve and the firewall in that machine's NixOS config: the shared Home Manager
 layer cannot install system services or firewall rules. Use the
 `tailscale-serve-mdp` unit and the TCP 8090 protection in `machines/dev.nix` as
 the reference, preserving that host's existing network configuration. In
-particular, retain the explicit port protection when testing other preview
-servers that may bind to all addresses.
+particular, keep the explicit port protection: Plannotator remote mode binds
+to all addresses, and Tailscale INPUT rules can bypass ordinary port allowlists.
 
 For a host where Serve is managed manually, after protecting port 8090:
 
@@ -303,15 +301,15 @@ After rebuilding, start a new fish shell (or `exec fish`) and verify:
 
 2. Open the printed **Tailnet** HTTPS URL on Mac and iPhone while connected to
    Tailscale. Confirm the Mermaid block renders as a diagram.
-3. Edit and save the file from another session, changing a node label. Click
-   **Reload** in each browser and confirm the diagram changes.
+3. Edit and save the file from another session, changing a node label. Confirm
+   both browsers update the document and diagram without a full page reload.
 4. Try `mdp`, cancel the picker, then try `mdp /tmp/mdp-demo`. Confirm the review
    lists the document and the calling shell's working directory is unchanged
    after Ctrl-C. Also try quoted paths with spaces.
-5. Add a comment through HTTPS and read it with `crit comments --session <id>
-   --json` from another shell. Have an agent handle the feedback, then review
-   the next round and try the diff view. An HTTP 403 can indicate a missing or
-   mismatched `--public-url`.
+5. Add a comment through HTTPS and submit annotations. Confirm feedback appears
+   in the invoking terminal and the session ends. Reopen the review and inspect
+   version history and restored annotations. An HTTP 403 can indicate a missing
+   or mismatched `PLANNOTATOR_PUBLIC_URL`.
 6. Inspect the VM's proxy and firewall:
 
    ```bash
@@ -322,7 +320,7 @@ After rebuilding, start a new fish shell (or `exec fish`) and verify:
    sudo ip6tables -t raw -C PREROUTING ! -i lo -p tcp --dport 8090 -m addrtype --dst-type LOCAL -j DROP
    ```
 
-   The listener should be `127.0.0.1:8090`. Both firewall checks should
+   The listener should be `0.0.0.0:8090`. Both firewall checks should
    succeed. From the Mac, `curl --connect-timeout 3 http://<VM-LAN-IP>:8090/`
    and the same command with its Tailscale IP should fail while HTTPS works.
    Check IPv6 too if available. Confirm SSH and Mosh still connect.
@@ -332,8 +330,9 @@ If HTTPS was enabled after the rebuild, restart the proxy with
 the unit from the config, rebuild, then run `sudo tailscale serve --https=7297 off`:
 `--bg` state persists in tailscaled even after the oneshot is stopped.
 
-References: [Crit v0.23.2 usage](https://github.com/tomasz-tomczyk/crit/blob/v0.23.2/README.md),
-[release assets](https://github.com/tomasz-tomczyk/crit/releases/tag/v0.23.2),
+References: [Plannotator annotate](https://github.com/backnotprop/plannotator/blob/v0.28.62/apps/marketing/src/content/docs/commands/annotate.md),
+[remote and proxy configuration](https://github.com/backnotprop/plannotator/blob/v0.28.62/apps/marketing/src/content/docs/guides/remote-and-devcontainers.md),
+[release assets](https://github.com/backnotprop/plannotator/releases/tag/v0.28.62),
 [Tailscale Serve](https://tailscale.com/docs/reference/tailscale-cli/serve),
 [ACL syntax](https://tailscale.com/docs/reference/syntax/policy-file).
 
