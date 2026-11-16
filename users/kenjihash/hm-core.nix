@@ -30,6 +30,7 @@ let
 
   # Not in stable nixpkgs; use our pinned unstable input without requiring a
   # custom overlay from foreign consumers of this module.
+  hunk = inputs.nixpkgs-unstable.legacyPackages.${pkgs.stdenv.hostPlatform.system}.hunk;
   tuicr = inputs.nixpkgs-unstable.legacyPackages.${pkgs.stdenv.hostPlatform.system}.tuicr;
 
   # Not packaged in our pinned nixpkgs. Upstream ships standalone Go binaries.
@@ -260,6 +261,7 @@ in
         # Agent-harness power tools (what Claude Code / Codex shell out to)
         ast-grep
         delta
+        hunk
         tuicr
         jc
         shellcheck
