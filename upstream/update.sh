@@ -1,15 +1,10 @@
 #!/usr/bin/env bash
 # Refresh the pinned upstream release data for the fast-lane agent CLIs.
 #
-# These four CLIs are distributed by their vendors as prebuilt binaries, and
-# nixpkgs redistributes those same bytes unchanged. Taking the vendor's own
-# release feed instead of waiting for a channel advance costs nothing in
-# provenance -- the checksum is the vendor's either way -- and removes the
-# nixpkgs maintainer, review, and Hydra stages from between a release and these
-# machines. The agent-CLI overlay in ../flake.nix reads what this writes.
-#
-# Kept in step with twincounsel/nix/upstream/update.sh, which carries the same
-# four feeds so that repo can stand alone without this one.
+# These CLIs are distributed by their vendors as prebuilt binaries. Record
+# each release's artifact URLs and checksums so the fleet can update without
+# waiting for nixpkgs to package that release. flake.nix's agent overlay reads
+# what this writes.
 #
 # opencode and pi-coding-agent are deliberately absent: nixpkgs builds both
 # from source with vendored dependency trees, so there is no prebuilt artifact
@@ -94,6 +89,35 @@ update_codex() {
   emit codex.json "$out"
 }
 
+# Factory's installer records the release version and publishes a SHA256 for
+# each standalone binary. Read the installer without executing it, and choose
+# baseline x64 binaries so the package does not require AVX2.
+update_droid() {
+  local installer version out sys platform url hex
+  installer=$(curl -fsSL https://app.factory.ai/cli)
+  version=$(sed -n 's/^VER="\([^"]*\)"$/\1/p' <<<"$installer")
+  [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] \
+    || { note "droid: installer has no release version"; return 1; }
+  note "droid: upstream $version"
+  out=$(jq -n --arg v "$version" '{version: $v, platforms: {}}')
+  for pair in \
+    x86_64-linux:linux/x64-baseline \
+    aarch64-linux:linux/arm64 \
+    x86_64-darwin:darwin/x64-baseline \
+    aarch64-darwin:darwin/arm64; do
+    sys=${pair%%:*}
+    platform=${pair##*:}
+    url="https://downloads.factory.ai/factory-cli/releases/$version/$platform/droid"
+    hex=$(curl -fsSL "$url.sha256")
+    [[ "$hex" =~ ^[[:xdigit:]]{64}$ ]] \
+      || { note "droid: invalid SHA256 for $sys"; return 1; }
+    out=$(jq --arg s "$sys" --arg u "$url" \
+      --arg h "$(nix hash convert --hash-algo sha256 --to sri "$hex")" \
+      '.platforms[$s] = {url: $u, hash: $h}' <<<"$out")
+  done
+  emit droid.json "$out"
+}
+
 # grok-build -- xAI publishes no checksums, so each artifact is fetched to hash
 # it. That is ~170MB per platform, which is why a hash already recorded for the
 # same URL is reused instead of being downloaded again.
@@ -122,13 +146,14 @@ update_grok_build() {
 }
 
 packages=("$@")
-[ ${#packages[@]} -gt 0 ] || packages=(claude-code antigravity-cli codex grok-build)
+[ ${#packages[@]} -gt 0 ] || packages=(claude-code antigravity-cli codex droid grok-build)
 
 for pkg in "${packages[@]}"; do
   case $pkg in
     claude-code) update_claude_code ;;
     antigravity-cli) update_antigravity_cli ;;
     codex) update_codex ;;
+    droid) update_droid ;;
     grok-build) update_grok_build ;;
     *) note "unknown package: $pkg"; exit 1 ;;
   esac

@@ -1,28 +1,16 @@
-# Standalone agent-CLI layer.
+# Install the personal agent CLI catalog without importing the private team
+# flake. The team consumes this repository's Home Manager module, so importing
+# it back here would create a dependency cycle. Keep the catalogs in step.
 #
-# Deliberately duplicates the catalog in twincounsel/nix/modules/devtools.nix so
-# that THIS repo stands alone: a fresh box, the Mac, or a personal VM gets the
-# agent CLIs without a private-repo flake input, SSH auth to a work remote, or
-# any knowledge of twincounsel at all.
-#
-# The duplication is intentional and cheap (six attribute names). Sharing it
-# would mean either pointing twincounsel at this repo — inverting the dependency
-# so a product repo imports a personal one — or pointing this repo at
-# twincounsel, which is exactly the coupling this file exists to avoid. Keep the
-# two catalogs in step by hand.
-#
-# On `dev`, twincounsel's devtools module is the provider and this stays off;
-# see machines/dev.nix. The assertion below explains why both at once is a bad
-# idea even though it is not a build error.
-#
-# Requires the agent-CLI pins in flake.nix's overlay and allowUnfree, both of
-# which lib/mksystem.nix already arranges.
+# This module supplies agent tools on dev. The exported Home Manager module
+# leaves system-wide agent selection to the consuming host.
+# Requires flake.nix's CLI overlay and allowUnfree from lib/mksystem.nix.
 { config, lib, pkgs, ... }:
 
 let
   cfg = config.kenji.agents;
 
-  # Keyed by the name I actually say. Three of the six differ from their
+  # Keyed by the command name. Some entries differ from their
   # nixpkgs attribute, and guessing wrong silently installs a different program:
   #   grok -> grok-build       (`grok-cli` is superagent-ai's third-party
   #                             wrapper, NOT xAI's CLI)
@@ -30,6 +18,8 @@ let
   #   agy  -> antigravity-cli  (`antigravity` is the IDE — mainProgram
   #                             antigravity-ide — not the terminal client. The
   #                             CLI's binary really is `agy`.)
+  #   amp  -> amp-cli          (`amp` is a text editor)
+  #   t3   -> t3code           (`t3` formats output streams)
   # `codex-cli` does not exist.
   #
   # `agy` replaced the former `gemini-cli` entry: Google retired Gemini CLI for
@@ -42,9 +32,13 @@ let
     opencode = pkgs.opencode;
     pi = pkgs.pi-coding-agent;
     grok = pkgs.grok-build;
+    amp = pkgs.amp-cli;
+    droid = pkgs.droid;
+    kiro-cli = pkgs.kiro-cli;
+    t3 = pkgs.t3code;
   };
 
-  # Keeps this evaluable on aarch64-darwin, where not all six are available.
+  # Keeps this evaluable on aarch64-darwin, where some tools are unavailable.
   # The enum stays complete so an explicit request for a missing tool still
   # errors loudly instead of being silently dropped.
   available = lib.filterAttrs (_: p: lib.meta.availableOn pkgs.stdenv.hostPlatform p) catalog;

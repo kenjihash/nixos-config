@@ -58,7 +58,7 @@ check:
 	nix eval --raw '.#homeConfigurations."kenji@x86_64-linux".activationPackage.drvPath' >/dev/null
 
 # Rewrites upstream/*.json from each vendor's own release feed, which is what
-# the agent-CLI overlay in flake.nix reads for the four fast-lane CLIs. Commit
+# the agent-CLI overlay in flake.nix reads for the vendor-pinned CLIs. Commit
 # the result; nothing reaches a machine until the next switch. Narrow it with
 # `make update-clis CLIS=codex`.
 CLIS ?=

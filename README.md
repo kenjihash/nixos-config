@@ -211,3 +211,16 @@ $ wsl -s nixos
 
 After the `wsl -d` command, you should be dropped into the Nix environment.
 _Voila!_
+
+## Update agent tools on dev
+
+Run `make update-clis` to refresh the vendor release manifests, including Droid.
+Run `nix flake update nixpkgs-unstable rex herdr` for channel packages and the
+terminal tools. Keep the base OS and Home Manager pins separate from tooling
+updates. Check the configuration with `make check`, then activate with
+`make switch NIXNAME=dev`.
+
+Amp, Droid, Kiro CLI and T3 Code are installed system-wide with the other
+agents. Hunk is a Git review utility in the personal Home Manager packages,
+independent of agent selection. Use each agent's own login before starting
+work; T3 uses the installed provider CLIs and their logins.

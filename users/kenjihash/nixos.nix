@@ -3,8 +3,7 @@
 {
   # Agent CLIs, declared here so every machine with this user CAN have them,
   # and enabled per-machine — the same shape as gui.nix / kenji.desktop.enable.
-  # Default off; `dev` deliberately leaves it off because twincounsel's devtools
-  # module is the provider there.
+  # Default off; machines/dev.nix enables the standalone provider on dev.
   imports = [
     ../../modules/agent-clis.nix
     # System service only: importing homeManagerModules.default on loop-kenji

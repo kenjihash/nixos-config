@@ -171,7 +171,7 @@
   # this off and get only the core ergonomics (shell/editor/herdr/CLIs/git).
   home-manager.users.kenjihash.kenji.desktop.enable = true;
 
-  # Agent CLIs (claude-code, codex, agy, opencode, pi, grok), system-wide
+  # Agent CLIs are installed system-wide
   # so they work from every repo on this box, not just one user's profile.
   #
   # Served by modules/agent-clis.nix rather than twincounsel's devtools module,
@@ -181,7 +181,6 @@
   # root, with no SSH agent) would need a pre-fetch dance on every update. The
   # dependency stays one-way: team flake -> personal flake.
   #
-  # Both catalogs pin the same six from nixpkgs-unstable, and loop-kenji still
-  # exercises the team module for real via `nixos-rebuild build-vm`.
+  # The standalone catalog uses the same release pins as the team module.
   kenji.agents.enable = true;
 }
