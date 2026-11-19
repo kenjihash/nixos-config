@@ -1,24 +1,24 @@
 { lib, stdenv, stdenvNoCC, fetchurl, autoPatchelfHook, openssl }:
 
 let
-  version = "0.28.62";
+  version = "0.29.0";
   # Install the pinned binary without upstream hooks, skills, or sidecars.
   assets = {
     aarch64-linux = {
       name = "linux-arm64";
-      sha256 = "3d0f58057ed0efd787b126d29f2c57d004836526e234e010a78e9fa7b95e89c6";
+      sha256 = "54086386c8bd6335a133bcc3f9ed28ef4ba861cf072b70cef32d0e1d124829fb";
     };
     x86_64-linux = {
       name = "linux-x64";
-      sha256 = "067f5c59da36b60bdce330d28eb29484f5f409e6028978b62061883296820fb0";
+      sha256 = "f2c575e7ae219472a45f53adb667ebb6eff13c2d89726d992d1f984a81161391";
     };
     aarch64-darwin = {
       name = "darwin-arm64";
-      sha256 = "e373925633fe9986e898bb53dffc26a0e664511163e2646c1e2655fbf65da9ca";
+      sha256 = "c383a5ff5338af20ced2c0090926e0ecd6a6019dcdd4112901bbb859e4186c06";
     };
     x86_64-darwin = {
       name = "darwin-x64";
-      sha256 = "ac0207f9d966bf1b9c2b295c3df311038efea28d194ece0db83932c4e0b310f3";
+      sha256 = "3d6da648a26887753fc959b547a7654fbe20200de5eb1aea93d839fee79173fa";
     };
   };
   system = stdenvNoCC.hostPlatform.system;
