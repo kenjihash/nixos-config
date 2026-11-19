@@ -216,9 +216,11 @@ _Voila!_
 
 Run `make update-clis` to refresh the vendor release manifests, including Droid.
 Run `nix flake update nixpkgs-unstable rex herdr` for channel packages and the
-terminal tools. Keep the base OS and Home Manager pins separate from tooling
-updates. Check the configuration with `make check`, then activate with
-`make switch NIXNAME=dev`.
+terminal tools. The recipes in [`upstream/`](upstream/) pin newer releases of
+Amp, Kiro CLI, OpenCode on Linux, and T3 Code while Nixpkgs catches up. Update
+the artifact and dependency hashes with each version bump. Keep the base OS
+and Home Manager pins separate from tooling updates. Check the configuration
+with `make check`, then activate with `make switch NIXNAME=dev`.
 
 Amp, Droid, Kiro CLI and T3 Code are installed system-wide with the other
 agents. Hunk is a Git review utility in the personal Home Manager packages,

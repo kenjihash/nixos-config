@@ -119,12 +119,16 @@
         # nixos-26.05 at all, and still an open beta that moves fast.
         obsidian-headless = unstable.obsidian-headless;
 
-        # Agent packages match the team catalog without importing its private
-        # flake. Vendor release manifests update with `make update-clis`;
-        # channel packages update with `nix flake update nixpkgs-unstable`.
-        inherit (unstable) amp-cli kiro-cli opencode pi-coding-agent;
+        # Use release pins for agent packages that lag the unstable channel.
+        inherit (unstable) pi-coding-agent;
+        amp-cli = unstable.callPackage ./upstream/amp-cli.nix { };
+        kiro-cli = unstable.callPackage ./upstream/kiro-cli.nix { };
+        opencode = unstable.callPackage ./upstream/opencode.nix { };
         droid = unstable.callPackage ./upstream/droid.nix { };
-        t3code = unstable.t3code.override { codex = final.codex; };
+        t3code = unstable.t3code.override {
+          codex = final.codex;
+          t3code-unwrapped = unstable.callPackage ./upstream/t3code-unwrapped.nix { };
+        };
 
         # The vendor manifest is the file nixpkgs' own package reads, so it is
         # passed through unreshaped rather than rebuilt into the form the
