@@ -222,6 +222,13 @@ the artifact and dependency hashes with each version bump. Keep the base OS
 and Home Manager pins separate from tooling updates. Check the configuration
 with `make check`, then activate with `make switch NIXNAME=dev`.
 
+NixOS user activation syncs an existing Codex app-server daemon with the
+generation's CLI package. It uses `CODEX_HOME` from the systemd user manager,
+defaulting to `~/.codex`. Activation skips matching pinned packages. Updating
+a running daemon restarts it and can interrupt active work. Check the versions
+with `codex app-server daemon version` and find activation errors in
+`journalctl --user -b -u nixos-activation.service`.
+
 Amp, Droid, Kiro CLI and T3 Code are installed system-wide with the other
 agents. Hunk is a Git review utility in the personal Home Manager packages,
 independent of agent selection. Use each agent's own login before starting

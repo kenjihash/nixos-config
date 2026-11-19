@@ -42,6 +42,41 @@ let
   # The enum stays complete so an explicit request for a missing tool still
   # errors loudly instead of being silently dropped.
   available = lib.filterAttrs (_: p: lib.meta.availableOn pkgs.stdenv.hostPlatform p) catalog;
+
+  syncCodexDaemon = pkgs.writeShellScript "sync-codex-daemon" ''
+    set -eu
+    codexHome="''${CODEX_HOME:-$HOME/.codex}"
+    daemon="$codexHome/packages/app-server-daemon"
+    legacy="$codexHome/packages/standalone"
+    state="$codexHome/app-server-daemon"
+
+    # A legacy standalone CLI selection can exist before daemon use.
+    if [[ ! -e "$daemon/current" && ! -L "$daemon/current" ]]; then
+      if [[ ! -e "$legacy/current" && ! -L "$legacy/current" ]] ||
+         [[ ! -f "$state/app-server.pid" && ! -f "$state/app-server.stderr.log" &&
+            ! -f "$state/app-server-updater.pid" && ! -f "$state/app-server-updater.stderr.log" ]]; then
+        exit 0
+      fi
+    fi
+
+    daemon_is_current() {
+      local item
+      [[ ! -e "$daemon/auto-update-version" && ! -L "$daemon/auto-update-version" ]] || return 1
+      for item in codex-package.json bin codex-path codex-resources; do
+        ${pkgs.diffutils}/bin/diff -qr "${pkgs.codex}/libexec/codex/$item" \
+          "$daemon/current/$item" >/dev/null 2>&1 || return 1
+      done
+    }
+    if daemon_is_current; then
+      exit 0
+    fi
+
+    userName="$(${pkgs.coreutils}/bin/id -un)"
+    export PATH="/run/wrappers/bin:$HOME/.nix-profile/bin:/etc/profiles/per-user/$userName/bin:/run/current-system/sw/bin"
+    # A daemon restarted by Codex must outlive the activation service.
+    exec ${pkgs.systemd}/bin/systemd-run --user --scope --quiet -- \
+      ${pkgs.codex}/bin/codex app-server daemon update --from-cli --yes
+  '';
 in
 {
   options.kenji.agents = {
@@ -57,6 +92,10 @@ in
 
   config = lib.mkIf cfg.enable {
     environment.systemPackages = map (n: catalog.${n}) cfg.tools;
+
+    system.userActivationScripts.codex-daemon = lib.mkIf (builtins.elem "codex" cfg.tools) {
+      text = "${syncCodexDaemon}";
+    };
 
     assertions = [
       {
