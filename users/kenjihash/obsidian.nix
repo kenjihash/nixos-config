@@ -6,7 +6,8 @@
 # Importing a separate package set also works with home-manager.useGlobalPkgs.
 # The package is unfree; installation follows its declared platform support.
 #
-# The sync units are opt-in per vault:
+# Set kenji.obsidian.sync.brain or kenji.obsidian.sync.brain-twincounsel
+# to true or false in a host profile. Additional vaults can specify a path:
 #   kenji.obsidian.vaults.notes = "${config.home.homeDirectory}/notes";
 #
 # Login and vault linking stay imperative — they write the account token and
@@ -20,7 +21,7 @@
 # `journalctl --user -u obsidian-sync-<name>`.
 { inputs }:
 
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, specialArgs, ... }:
 
 let
   cfg = config.kenji.obsidian;
@@ -33,6 +34,14 @@ let
   available = lib.meta.availableOn pkgs.stdenv.hostPlatform package;
 in
 {
+  options.kenji.obsidian.sync = {
+    brain = lib.mkEnableOption "continuous Obsidian Sync for ~/brain";
+    brain-twincounsel = lib.mkEnableOption "continuous Obsidian Sync for ~/brain-twincounsel" // {
+      default = (specialArgs.osConfig.networking.hostName or null) == "loop-kenji";
+      defaultText = lib.literalMD "enabled on `loop-kenji`";
+    };
+  };
+
   options.kenji.obsidian.vaults = lib.mkOption {
     type = lib.types.attrsOf lib.types.str;
     default = { };
@@ -45,6 +54,11 @@ in
   };
 
   config = lib.mkMerge [
+    {
+      kenji.obsidian.vaults = lib.mapAttrs
+        (name: _: lib.mkDefault "${config.home.homeDirectory}/${name}")
+        (lib.filterAttrs (_: enabled: enabled) cfg.sync);
+    }
     (lib.mkIf available { home.packages = [ package ]; })
 
     (lib.mkIf (cfg.vaults != { }) {

@@ -157,7 +157,7 @@ in
   # moshi.nix is the same shape: the moshi-hook daemon, gated by
   # kenji.moshi.enable, off by default and turned on by the loop VM.
   # obsidian.nix installs `ob` and runs a sync unit per kenji.obsidian.vaults
-  # entry — none by default.
+  # entry, with per-vault switches for the two brain vaults.
   imports = [
     inputs.direnv-instant.homeModules.direnv-instant
     ./gui.nix
